@@ -1,0 +1,6 @@
+/* App-level layout (component-scoped). All page-level styles use hz- prefix in index.css. */
+.hz-app-shell {
+    min-height: 100vh;
+    background-color: var(--hz-bg);
+    color: var(--hz-text);
+}

@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <!-- Basic Meta Setup -->
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#162D24" />
+    <meta name="description" content="HZ Travel Zone — Admin Panel" />
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://api.fontshare.com" crossorigin />
+    <link 
+        href="https://api.fontshare.com/v2/css?f[]=cabinet-grotesk@400,500,700,800,900&f[]=satoshi@400,500,700&f[]=jetbrains-mono@400,500,700&display=swap" 
+        rel="stylesheet"
+    />
+
+    <!-- Page Title -->
+    <title>HZ Travel Zone — Admin Panel</title>
+
+    <!-- Fix for PerformanceServerTiming DataCloneError -->
+    <script>
+        window.addEventListener("error", function (event) {
+            if (
+                event.error instanceof DOMException &&
+                event.error.name === "DataCloneError" &&
+                event.message &&
+                event.message.includes("PerformanceServerTiming")
+            ) {
+                event.stopImmediatePropagation();
+                event.preventDefault();
+            }
+        }, true);
+    </script>
+</head>
+
+<body>
+    <!-- Fallback for no JavaScript -->
+    <noscript>
+        JavaScript is required to run this application. Please enable it in your browser.
+    </noscript>
+
+    <!-- React App Root -->
+    <div id="root"></div>
+</body>
+</html>
