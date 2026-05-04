@@ -20,6 +20,7 @@ import PrintInvoice from "@/pages/PrintInvoice";
 import ClosureSlip from "@/pages/ClosureSlip";
 import { useAuth } from "@/hooks/useAuth";
 import { db } from "@/lib/mockData";
+import UserListOld from "./pages/users/UserList copy";
 
 function ProtectedRoute({ children }) {
   const { isAuthed } = useAuth();
@@ -59,6 +60,7 @@ function App() {
             <Route path="/categories" element={<CategoryMaster />} />
             <Route path="/destinations" element={<DestinationMaster />} />
             <Route path="/users" element={<UserList />} />
+            <Route path="/users2" element={<UserListOld />} />
             <Route path="/users/:id/transactions" element={<UserTransactions />} />
             <Route path="/travellers" element={<Travellers />} />
             <Route path="/winners" element={<Winners />} />

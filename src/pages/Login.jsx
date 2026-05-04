@@ -16,10 +16,25 @@ export default function Login() {
 
   const validate = () => {
     const e = {};
-    if (!form.email.trim()) e.email = "Email is required.";
-    else if (!/^\S+@\S+\.\S+$/.test(form.email)) e.email = "Enter a valid email address.";
-    if (!form.password) e.password = "Password is required.";
-    else if (form.password.length < 6) e.password = "Password must be at least 6 characters.";
+    const value = form.email.trim(); 
+  
+    const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+    const isMobile = /^[0-9]{10}$/.test(value);
+  
+    // Login field validation (email OR mobile)
+    if (!value) {
+      e.email = "Email or mobile number is required.";
+    } else if (!isEmail && !isMobile) {
+      e.email = "Enter a valid email or 10-digit mobile number.";
+    }
+  
+    // Password validation
+    if (!form.password) {
+      e.password = "Password is required.";
+    } else if (form.password.length < 6) {
+      e.password = "Password must be at least 6 characters.";
+    }
+  
     setErrors(e);
     return Object.keys(e).length === 0;
   };
@@ -28,15 +43,26 @@ export default function Login() {
     e.preventDefault();
     if (!validate()) return;
     setSubmitting(true);
-    const res = await login({ email: form.email, password: form.password });
-    setSubmitting(false);
-    if (res.ok) {
-      toast.success("Welcome back, Hari", { description: "Your travel control room is ready." });
-      navigate("/dashboard");
-    } else {
-      setErrors({ password: res.error });
-      toast.error("Sign-in failed", { description: res.error });
+    try{
+      const {status,message,token} = await login({ email: form.email, password: form.password });
+      console.log("Login response:", {status, message, token});
+      if(status === 1){
+        toast.success(message || "Login successful. Welcome back!");
+        navigate("/dashboard");
+      }
+      else{
+        setErrors({ password: message || "Login failed. Please check your credentials and try again." });
+        toast.error("Sign-in failed", { description: message || "Login failed. Please check your credentials and try again." });
+      }
     }
+    catch(e){
+      setErrors({ password: "Network error. Please try again." });
+      toast.error("Sign-in failed", { description: "Network error. Please try again." });
+    }
+    finally{
+      setSubmitting(false);
+    }
+    
   };
 
   return (

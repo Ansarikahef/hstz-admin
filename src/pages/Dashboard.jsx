@@ -8,6 +8,7 @@ import { db, formatCurrency, formatDate } from "@/lib/mockData";
 import HzPageHeader from "@/components/shared/HzPageHeader";
 import HzStatCard from "@/components/shared/HzStatCard";
 import { Link } from "react-router-dom";
+import Helper from "@/Utils/Helper";
 
 export default function Dashboard() {
   const state = db.load();
@@ -17,6 +18,9 @@ export default function Dashboard() {
   const totalSales = transactions.filter((t) => t.status === "paid").reduce((s, t) => s + t.amount, 0);
   const activePackages = packages.filter((p) => p.status === "active").length;
   const visitors = 12480;
+
+  const loggedInUser = Helper.getLoginUserDetails() ?? null; 
+  console.log("Logged in user details:", loggedInUser);
 
   const trendData = useMemo(() => {
     const months = ["Aug", "Sep", "Oct", "Nov", "Dec", "Jan", "Feb"];
@@ -50,15 +54,15 @@ export default function Dashboard() {
     <div data-testid="dashboard-page">
       <HzPageHeader
         kicker="Operator console"
-        title="Welcome back, Hari."
+        title={`Welcome back, ${loggedInUser.firstName} ${loggedInUser.lastName}`}
         description="A quiet overview of bookings, revenue, and traveller activity across HZ Travel Zone."
         testid="dashboard-header"
-        actions={
-          <button className="hz-btn-ghost" data-testid="dashboard-export">
-            <CalendarRange className="size-4" strokeWidth={1.5} />
-            Last 30 days
-          </button>
-        }
+        // actions={
+        //   <button className="hz-btn-ghost" data-testid="dashboard-export">
+        //     <CalendarRange className="size-4" strokeWidth={1.5} />
+        //     Last 30 days
+        //   </button>
+        // }
       />
 
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5">

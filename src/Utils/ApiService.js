@@ -6,34 +6,37 @@ const apiService = {
 
   handleResponse: async function (response) {
     try {
-      const data = await response.json().catch(() => ({}))
-
+      const data = await response.json().catch(() => ({}));
       return {
         status: response.ok ? 1 : 0,
         statusCode: response.status,
         message:
           data.message ||
-          (response.ok ? 'Success' : `Error ${response.status}`),
-        responseValue: data,
-      }
+          (response.ok ? "Success" : `Error ${response.status}`),
+  
+        responseValue: data.responseValue ?? [],  
+        token: data.token ?? null
+      };
     } catch (error) {
       return {
         status: 0,
         statusCode: 500,
-        message: 'Something went wrong while parsing response',
+        message: "Something went wrong while parsing response",
         responseValue: null,
-      }
+      };
     }
   },
 
   get: async function (endpoint, options = {}) {
     try {
+      const token = localStorage.getItem("hstzAuthToken") ?? null;
       const finalEndpoint = this.buildEndpoint(endpoint, options)
 
       const response = await fetch(`${this.baseUrl}${finalEndpoint}`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
+          ...(token && { Authorization: `Bearer ${token}` })
         },
       })
 
@@ -49,8 +52,8 @@ const apiService = {
   },
 
   post: async function (endpoint, data = {}, options = {}) {
-    console.log('baseUrl', this.baseUrl)
     try {
+      const token = localStorage.getItem("hstzAuthToken") ?? null;
       const { auth = false } = options
       const payload = this.buildPayload(data, { auth })
 
@@ -58,6 +61,7 @@ const apiService = {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          ...(token && { Authorization: `Bearer ${token}` })
         },
         body: JSON.stringify(payload),
       })
@@ -75,10 +79,12 @@ const apiService = {
 
   postMedia: async function (endpoint, data) {
     try {
+      const token = localStorage.getItem("hstzAuthToken")  ?? null;
       const response = await fetch(`${this.baseUrl}${endpoint}`, {
         method: 'POST',
         headers: {
           accept: '*/*',
+          ...(token && { Authorization: `Bearer ${token}` })
         },
         body: data,
       })
