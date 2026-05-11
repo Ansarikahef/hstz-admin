@@ -5,6 +5,9 @@ import HzPageHeader from "@/components/shared/HzPageHeader";
 import { db, formatCurrency } from "@/lib/mockData";
 import ConfirmModal from "@/components/modals/ConfirmModal";
 import { toast } from "sonner";
+import apiService from "@/Utils/ApiService";
+import { useQuery } from "@tanstack/react-query";
+import Helper from "@/Utils/Helper";
 
 const STATUS_LABEL = { active: "Active", inactive: "Inactive", closed: "Closed" };
 const STATUS_CLASS = { active: "hz-badge--active", inactive: "hz-badge--inactive", closed: "hz-badge--closed" };
@@ -62,7 +65,58 @@ export default function PackageList() {
     URL.revokeObjectURL(url);
     toast.success("CSV exported");
   };
-
+  const handleViewPackage = (pkg) => {
+    Helper.storeToSession("selectedPackage", pkg);
+    navigate(`/packages-details`);
+  }
+  const getPackageList = async () => {
+      const { status, message, responseValue } =
+        await apiService.get("admin/PackageList");
+  
+      if (status === 1) {
+        return responseValue || [];
+      } else {
+        throw new Error(message || "Failed to fetch destination list");
+      }
+  };
+  // React Query
+  const { data: packages = [] } = useQuery({
+    queryKey: ["packages"], 
+    queryFn: getPackageList,
+    keepPreviousData: true,
+    staleTime: 5 * 60 * 1000,
+    cacheTime: 10 * 60 * 1000,
+    refetchOnWindowFocus: false
+  });
+  console.log("Fetched packages:", packages);
+  const packageList = useMemo(() => {
+    return packages.map((item) => ({
+      ...item,
+      statusName: item.status === 1 ? "active" : item.status === 2 ? "inactive" : "closed",
+  
+      durationJson: item.durationJson
+        ? JSON.parse(item.durationJson)
+        : [],
+  
+      itineraryJson: item.itineraryJson
+        ? JSON.parse(item.itineraryJson)
+        : [],
+  
+      categories: item.categories
+        ? JSON.parse(item.categories)
+        : [],
+  
+      destinations: item.destinations
+        ? JSON.parse(item.destinations)
+        : [],
+  
+      images: item.images
+        ? JSON.parse(item.images)
+        : [],
+    }));
+  }, [packages]);
+  
+  console.log("Parsed Packages:", packageList);
   return (
     <div data-testid="package-list-page">
       <HzPageHeader
@@ -112,24 +166,24 @@ export default function PackageList() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
-        {visible.map((p) => {
-          const minPrice = Math.min(...p.durations.map((d) => d.price));
-          const cats = p.categories.map((c) => state.categories.find((x) => x.id === c)?.name).filter(Boolean);
-          const dests = p.destinations.map((d) => state.destinations.find((x) => x.id === d)?.name).filter(Boolean);
+        {packageList.length > 0 && packageList.map((p) => {
+           const minPrice = Math.min(...p.durationJson.map((d) => d.price));
+          {/*const cats = p.categories.map((c) => state.categories.find((x) => x.id === c)?.name).filter(Boolean);
+          const dests = p.destinations.map((d) => state.destinations.find((x) => x.id === d)?.name).filter(Boolean); */}
           return (
-            <div key={p.id} className="hz-card overflow-hidden flex flex-col" data-testid={`package-card-${p.id}`}>
+            <div key={p.packageId} className="hz-card overflow-hidden flex flex-col" data-testid={`package-card-${p.packageId}`}>
               <div className="relative h-44 overflow-hidden bg-[var(--hz-hover)]">
-                {p.images?.[0] && <img src={p.images[0]} alt={p.name} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />}
-                <div className="absolute top-3 left-3"><span className={`hz-badge ${STATUS_CLASS[p.status]}`}>{STATUS_LABEL[p.status]}</span></div>
-                <div className="absolute bottom-3 right-3 bg-white/95 backdrop-blur rounded-lg px-2.5 py-1 text-[11px] hz-mono">{p.durations.length} durations</div>
+                {p.images?.[0] && <img src={p.images[0].imagePath} alt={p.packageName} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />}
+                <div className="absolute top-3 left-3"><span className={`hz-badge ${STATUS_CLASS[p.statusName]}`}>{STATUS_LABEL[p.statusName]}</span></div>
+                <div className="absolute bottom-3 right-3 bg-white/95 backdrop-blur rounded-lg px-2.5 py-1 text-[11px] hz-mono">{p.durationJson.length} durations</div>
               </div>
               <div className="p-5 flex-1 flex flex-col">
-                <h3 className="hz-heading text-lg font-medium leading-tight">{p.name}</h3>
+                <h3 className="hz-heading text-lg font-medium leading-tight">{p.packageName}</h3>
                 <p className="text-[13px] text-[var(--hz-text-2)] mt-1.5 line-clamp-2">{p.description}</p>
                 <div className="flex items-center gap-2 mt-3 text-xs text-[var(--hz-text-2)] flex-wrap">
-                  <span className="inline-flex items-center gap-1"><MapPin className="size-3.5" strokeWidth={1.5} />{dests.join(", ")}</span>
+                  <span className="inline-flex items-center gap-1"><MapPin className="size-3.5" strokeWidth={1.5} /> {p.destinations?.map((d) => d.name).join(", ")}</span>
                   <span>·</span>
-                  <span className="inline-flex items-center gap-1"><Layers className="size-3.5" strokeWidth={1.5} />{cats.join(", ")}</span>
+                  <span className="inline-flex items-center gap-1"><Layers className="size-3.5" strokeWidth={1.5} />{p.categories?.map((c) => c.name).join(", ")}</span>
                 </div>
                 <div className="mt-auto pt-4 flex items-end justify-between">
                   <div>
@@ -137,17 +191,18 @@ export default function PackageList() {
                     <div className="hz-heading text-2xl font-medium hz-mono">{formatCurrency(minPrice)}</div>
                   </div>
                   <div className="flex items-center gap-1">
-                    <button onClick={() => navigate(`/packages/${p.id}`)} className="hz-btn-ghost !h-9 !w-9 !p-0 justify-center" data-testid={`package-view-${p.id}`} title="View"><Eye className="size-4" strokeWidth={1.5} /></button>
-                    <button onClick={() => navigate(`/packages/${p.id}/edit`)} className="hz-btn-ghost !h-9 !w-9 !p-0 justify-center" data-testid={`package-edit-${p.id}`} title="Edit"><Edit2 className="size-4" strokeWidth={1.5} /></button>
-                    <button onClick={() => toggleStatus(p.id)} className="hz-btn-ghost !h-9 !w-9 !p-0 justify-center" data-testid={`package-toggle-${p.id}`} title="Toggle status"><Calendar className="size-4" strokeWidth={1.5} /></button>
-                    <button onClick={() => setConfirm({ open: true, id: p.id })} className="hz-btn-ghost !h-9 !w-9 !p-0 justify-center text-[var(--hz-error)]" data-testid={`package-delete-${p.id}`} title="Delete"><Trash2 className="size-4" strokeWidth={1.5} /></button>
+                    {/* <button onClick={() => navigate(`/packages/${p.packageId}`)} className="hz-btn-ghost !h-9 !w-9 !p-0 justify-center" data-testid={`package-view-${p.packageId}`} title="View"><Eye className="size-4" strokeWidth={1.5} /></button> */}
+                    <button onClick={() => handleViewPackage(p)} className="hz-btn-ghost !h-9 !w-9 !p-0 justify-center" data-testid={`package-view-${p.packageId}`} title="View"><Eye className="size-4" strokeWidth={1.5} /></button>
+                    <button onClick={() => navigate(`/packages/${p.packageId}/edit`)} className="hz-btn-ghost !h-9 !w-9 !p-0 justify-center" data-testid={`package-edit-${p.packageId}`} title="Edit"><Edit2 className="size-4" strokeWidth={1.5} /></button>
+                    <button onClick={() => toggleStatus(p.packageId)} className="hz-btn-ghost !h-9 !w-9 !p-0 justify-center" data-testid={`package-toggle-${p.packageId}`} title="Toggle status"><Calendar className="size-4" strokeWidth={1.5} /></button>
+                    <button onClick={() => setConfirm({ open: true, id: p.id })} className="hz-btn-ghost !h-9 !w-9 !p-0 justify-center text-[var(--hz-error)]" data-testid={`package-delete-${p.packageId}`} title="Delete"><Trash2 className="size-4" strokeWidth={1.5} /></button>
                   </div>
                 </div>
               </div>
             </div>
           );
         })}
-        {visible.length === 0 && (
+        {packageList.length === 0 && (
           <div className="hz-card p-12 col-span-full text-center" data-testid="packages-empty">
             <div className="hz-heading text-lg mb-1">No packages match your filter</div>
             <div className="text-sm text-[var(--hz-text-2)]">Try clearing the search or change the status.</div>

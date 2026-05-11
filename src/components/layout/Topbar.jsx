@@ -42,20 +42,20 @@ export default function Topbar({ onToggleSidebar, onToggleMobile, dark, setDark 
           </button>
 
           <div className="hidden md:flex items-center gap-2 ml-2 text-[11px] tracking-[0.2em] uppercase text-[var(--hz-text-2)]">
-            <span>HZ</span>
+            <span>HS Travel Zone</span>
             <span>·</span>
             <span>Admin Console</span>
           </div>
 
           <div className="ml-auto flex items-center gap-2 sm:gap-3">
-            <div className="hidden md:block hz-input-wrap w-72">
+            {/* <div className="hidden md:block hz-input-wrap w-72">
               <Search className="hz-input-icon size-4" strokeWidth={1.5} />
               <input
                 data-testid="topbar-search"
                 className="hz-input !h-10"
                 placeholder="Search packages, users…"
               />
-            </div>
+            </div> */}
             <button
               data-testid="topbar-notifications"
               className="hz-btn-ghost !h-10 !w-10 !px-0 justify-center relative"

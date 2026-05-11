@@ -53,7 +53,7 @@ export default function Sidebar({ collapsed, setCollapsed, mobileOpen, setMobile
           </div>
           {!collapsed && (
             <div className="overflow-hidden">
-              <div className="hz-heading text-lg leading-none font-semibold tracking-tight">HZ Travel Zone</div>
+              <div className="hz-heading text-lg leading-none font-semibold tracking-tight">HS Travel Zone</div>
               <div className="text-[11px] tracking-[0.18em] uppercase text-white/50 mt-1">Admin Console</div>
             </div>
           )}

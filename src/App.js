@@ -21,6 +21,7 @@ import ClosureSlip from "@/pages/ClosureSlip";
 import { useAuth } from "@/hooks/useAuth";
 import { db } from "@/lib/mockData";
 import UserListOld from "./pages/users/UserList copy";
+import PackageDetailV2 from "./pages/packages/PackageDetailV2";
 
 function ProtectedRoute({ children }) {
   const { isAuthed } = useAuth();
@@ -57,6 +58,7 @@ function App() {
             <Route path="/packages/new" element={<PackageForm />} />
             <Route path="/packages/:id" element={<PackageDetail />} />
             <Route path="/packages/:id/edit" element={<PackageForm />} />
+            <Route path="/packages-details" element={<PackageDetailV2 />} />
             <Route path="/categories" element={<CategoryMaster />} />
             <Route path="/destinations" element={<DestinationMaster />} />
             <Route path="/users" element={<UserList />} />

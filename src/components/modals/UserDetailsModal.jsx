@@ -1,5 +1,5 @@
 import HzModal from "./HzModal";
-import { Mail, Phone, MapPin, Calendar, Receipt, Printer } from "lucide-react";
+import { Mail, Phone, MapPin, Calendar, Receipt, Printer, ShieldCheck, UserCog } from "lucide-react";
 import { formatDate } from "@/lib/mockData";
 
 export default function UserDetailsModal({ user, onClose, onOpenTransactions }) {
@@ -70,6 +70,20 @@ export default function UserDetailsModal({ user, onClose, onOpenTransactions }) 
           <div className="flex items-center gap-2 text-[var(--hz-text-2)]">
             <Calendar className="size-4" />
             Joined {formatDate(user.createdDate)}
+          </div>
+          <div className="flex items-center gap-2 text-[var(--hz-text-2)]">
+            <UserCog  className="size-4" />
+            <span
+              className={`user-status-badge ${
+                user.userStatus === "Active"
+                  ? "status-active"
+                  : user.userStatus === "Inactive"
+                  ? "status-inactive"
+                  : "status-suspend"
+              }`}
+            >
+              {user.userStatus}
+            </span>
           </div>
         </div>
       </div>

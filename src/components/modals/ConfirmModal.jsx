@@ -13,6 +13,7 @@ export default function ConfirmModal({
   tone = "default",
   icon,
   testid = "confirm",
+  isBtnDisabled = false
 }) {
   useEffect(() => {
     if (!open) return;
@@ -73,6 +74,7 @@ export default function ConfirmModal({
               onClick={onConfirm}
               data-testid={`${testid}-modal-confirm`}
               className={`text-white h-10 px-5 rounded-lg font-medium text-sm transition-colors ${cta}`}
+              disabled={isBtnDisabled}
             >
               {confirmLabel}
             </button>

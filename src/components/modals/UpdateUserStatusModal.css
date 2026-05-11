@@ -1,0 +1,358 @@
+/* =========================
+   Overlay
+========================= */
+
+.statusModalOverlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.65);
+    backdrop-filter: blur(4px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 999;
+    padding: 16px;
+  }
+  
+  /* =========================
+     Modal Container
+  ========================= */
+  
+  .statusModalContainer {
+    width: 100%;
+    max-width: 460px;
+    background: #ffffff;
+    border-radius: 22px;
+    overflow: hidden;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.18);
+    animation: popup 0.25s ease;
+  }
+  
+  /* =========================
+     Animation
+  ========================= */
+  
+  @keyframes popup {
+    from {
+      opacity: 0;
+      transform: translateY(14px) scale(0.97);
+    }
+  
+    to {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+  }
+  
+  @keyframes mobileSlideUp {
+    from {
+      transform: translateY(100%);
+    }
+  
+    to {
+      transform: translateY(0);
+    }
+  }
+  
+  /* =========================
+     Header
+  ========================= */
+  
+  .statusModalHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 18px;
+    border-bottom: 1px solid #f1f5f9;
+  }
+  
+  .statusHeaderLeft {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  
+  .statusIconBox {
+    width: 46px;
+    height: 46px;
+    border-radius: 14px;
+    background: linear-gradient(135deg, #2563eb, #4f46e5);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  .statusHeaderLeft h2 {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 700;
+    color: #0f172a;
+  }
+  
+  .statusHeaderLeft p {
+    margin: 3px 0 0;
+    font-size: 13px;
+    color: #64748b;
+  }
+  
+  .closeBtn {
+    width: 38px;
+    height: 38px;
+    border: none;
+    border-radius: 12px;
+    background: #f8fafc;
+    color: #334155;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: 0.2s;
+  }
+  
+  .closeBtn:hover {
+    background: #e2e8f0;
+  }
+  
+  /* =========================
+     Body
+  ========================= */
+  
+  .statusModalBody {
+    padding: 18px;
+  }
+  
+  .sectionLabel {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    font-weight: 600;
+    margin-bottom: 10px;
+    color: #0f172a;
+  }
+  
+  /* =========================
+     Status Grid
+  ========================= */
+  
+  .statusGrid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    margin-bottom: 18px;
+  }
+  
+  /* =========================
+     Status Card
+  ========================= */
+  
+  .statusCard {
+    border: 1.5px solid #e2e8f0;
+    border-radius: 16px;
+    padding: 12px 8px;
+    text-align: center;
+    background: #ffffff;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+  
+  .statusCard:hover {
+    transform: translateY(-2px);
+  }
+  
+  .statusCard.selected {
+    border-color: #2563eb;
+    background: rgba(37, 99, 235, 0.05);
+  }
+  
+  .statusCardIcon {
+    width: 40px;
+    height: 40px;
+    margin: auto auto 8px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  /* Active */
+  
+  .statusCard.active .statusCardIcon {
+    background: rgba(34, 197, 94, 0.12);
+    color: #16a34a;
+  }
+  
+  /* Inactive */
+  
+  .statusCard.inactive .statusCardIcon {
+    background: rgba(239, 68, 68, 0.12);
+    color: #dc2626;
+  }
+  
+  /* Suspend */
+  
+  .statusCard.suspend .statusCardIcon {
+    background: rgba(245, 158, 11, 0.14);
+    color: #d97706;
+  }
+  
+  .statusCard span {
+    font-size: 13px;
+    font-weight: 600;
+    color: #0f172a;
+  }
+  
+  /* =========================
+     Remark
+  ========================= */
+  
+  .remarkSection textarea {
+    width: 100%;
+    min-height: 85px;
+    resize: none;
+    border: 1.5px solid #dbeafe;
+    border-radius: 14px;
+    padding: 12px;
+    font-size: 13px;
+    font-family: inherit;
+    outline: none;
+    box-sizing: border-box;
+    transition: 0.2s;
+  }
+  
+  .remarkSection textarea:focus {
+    border-color: #2563eb;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+  }
+  
+  /* =========================
+     Footer
+  ========================= */
+  
+  .statusModalFooter {
+    padding: 16px 18px;
+    border-top: 1px solid #f1f5f9;
+    display: flex;
+    gap: 10px;
+  }
+  
+  .cancelBtn,
+  .updateBtn {
+    flex: 1;
+    height: 44px;
+    border: none;
+    border-radius: 12px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+  }
+  
+  .cancelBtn {
+    background: #f1f5f9;
+    color: #334155;
+  }
+  
+  .cancelBtn:hover {
+    background: #e2e8f0;
+  }
+  
+  .updateBtn {
+    background: linear-gradient(135deg, #2563eb, #4f46e5);
+    color: #ffffff;
+  }
+  
+  .updateBtn:hover {
+    opacity: 0.95;
+    transform: translateY(-1px);
+  }
+  
+  /* =========================
+     Tablet
+  ========================= */
+  
+  @media (max-width: 768px) {
+    .statusModalContainer {
+      max-width: 95%;
+    }
+  
+    .statusGrid {
+      gap: 8px;
+    }
+  
+    .statusCard {
+      padding: 10px 6px;
+    }
+  }
+  
+ /* =========================
+   Mobile
+========================= */
+
+@media screen and (max-width: 520px) {
+    .statusModalOverlay {
+      position: fixed;
+      inset: 0;
+      padding: 0 !important;
+  
+      display: flex;
+      justify-content: flex-end;
+      flex-direction: column;
+  
+      align-items: stretch !important;
+    }
+  
+    .statusModalContainer {
+      width: 100%;
+      max-width: 100%;
+      margin: 0 !important;
+  
+      border-radius: 24px 24px 0 0;
+  
+      animation: mobileSlideUp 0.25s ease;
+  
+      /* Important */
+      position: relative;
+      bottom: 0;
+    }
+  
+    .statusModalHeader {
+      padding: 14px;
+    }
+  
+    .statusModalBody {
+      padding: 14px;
+    }
+  
+    .statusModalFooter {
+      padding: 14px;
+    }
+  
+    .statusGrid {
+      grid-template-columns: 1fr;
+      gap: 10px;
+    }
+  
+    .statusCard {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+  
+      text-align: left;
+      padding: 12px;
+    }
+  
+    .statusCardIcon {
+      margin: 0;
+      flex-shrink: 0;
+    }
+  
+    .remarkSection textarea {
+      min-height: 70px;
+    }
+  }

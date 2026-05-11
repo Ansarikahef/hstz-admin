@@ -53,9 +53,9 @@ export default function Dashboard() {
   return (
     <div data-testid="dashboard-page">
       <HzPageHeader
-        kicker="Operator console"
+        kicker="Admin console"
         title={`Welcome back, ${loggedInUser.firstName} ${loggedInUser.lastName}`}
-        description="A quiet overview of bookings, revenue, and traveller activity across HZ Travel Zone."
+        description="A quiet overview of bookings, revenue, and traveller activity across HS Travel Zone."
         testid="dashboard-header"
         // actions={
         //   <button className="hz-btn-ghost" data-testid="dashboard-export">

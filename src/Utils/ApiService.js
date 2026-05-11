@@ -65,7 +65,6 @@ const apiService = {
         },
         body: JSON.stringify(payload),
       })
-
       return await this.handleResponse(response)
     } catch (error) {
       return {

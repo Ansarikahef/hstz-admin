@@ -51,7 +51,6 @@ export default function CategoryMaster() {
     // db.save(s);
     // setState({ ...s });
     // setOpen(false);
-    console.log("logg", loggedInUser);
     const payload = {
       categoryName: form.name,
       categoryDesc: form.description,

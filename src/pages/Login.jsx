@@ -9,7 +9,7 @@ import { toast } from "sonner";
 export default function Login() {
   const { login } = useAuth();
   const navigate = useNavigate();
-  const [form, setForm] = useState({ email: DEMO_CREDENTIALS.email, password: DEMO_CREDENTIALS.password, remember: true });
+  const [form, setForm] = useState({ email: '', password: '', remember: false });
   const [errors, setErrors] = useState({});
   const [showPwd, setShowPwd] = useState(false);
   const [submitting, setSubmitting] = useState(false);

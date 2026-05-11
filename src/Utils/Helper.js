@@ -52,6 +52,29 @@ const Helper ={
           return null;
         }
       },
+      encodeBase64: (str) => {
+        return btoa(encodeURIComponent(str))
+      },
+      decodeBase64: (encodedStr) => {
+        return decodeURIComponent(atob(encodedStr))
+      },
+      storeToSession(key, value) {
+        try {
+          const encodedValue = this.encodeBase64(JSON.stringify(value))
+          sessionStorage.setItem(key, encodedValue)
+        } catch (error) {
+          console.error('Error While Save Data in Session Storage:', error)
+        }
+      },
+      retrieveFromSession(key) {
+        try {
+          const value = sessionStorage.getItem(key)
+          return value ? JSON.parse(this.decodeBase64(value)) : null
+        } catch (error) {
+          console.error('Error While fetching Data from Session Storage:', error)
+          return null
+        }
+      },
 }
 
 export default Helper

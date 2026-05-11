@@ -76,7 +76,7 @@ export default function Register() {
     else if (form.password.length < 6) e.password = "At least 6 characters.";
     if (form.confirmPassword !== form.password) e.confirmPassword = "Passwords do not match.";
     if (!form.mpin.trim()) e.mpin = "MPIN is required.";
-    else if (!/^\d{4,6}$/.test(form.mpin)) e.mpin = "MPIN must be 4–6 digits.";
+    else if (!/^\d{6}$/.test(form.mpin)) e.mpin = "MPIN must be 6 digits.";
     if (form.confirmMpin !== form.mpin) e.confirmMpin = "MPIN does not match.";
     if (form.isRegisteredByAdmin && !form.adminRemarks.trim()) e.adminRemarks = "Add a short admin note.";
     if (!form.terms) e.terms = "Please accept the terms to continue.";
@@ -218,7 +218,7 @@ export default function Register() {
           <Section kicker="Security" title="Password & MPIN" description="Set a password for the web portal and a 4–6 digit MPIN for the mobile app.">
             <HzInput label="Password" icon={Lock} type="password" placeholder="••••••••" value={form.password} onChange={setField("password")} error={errors.password} testid="register-password" />
             <HzInput label="Confirm password" icon={Lock} type="password" placeholder="••••••••" value={form.confirmPassword} onChange={setField("confirmPassword")} error={errors.confirmPassword} testid="register-confirm-password" />
-            <HzInput label="MPIN (4–6 digits)" icon={KeyRound} type="password" inputMode="numeric" maxLength={6} placeholder="••••" value={form.mpin} onChange={setField("mpin")} error={errors.mpin} testid="register-mpin" />
+            <HzInput label="MPIN (6 digits)" icon={KeyRound} type="password" inputMode="numeric" maxLength={6} placeholder="••••" value={form.mpin} onChange={setField("mpin")} error={errors.mpin} testid="register-mpin" />
             <HzInput label="Confirm MPIN" icon={KeyRound} type="password" inputMode="numeric" maxLength={6} placeholder="••••" value={form.confirmMpin} onChange={setField("confirmMpin")} error={errors.confirmMpin} testid="register-confirm-mpin" />
           </Section>
 

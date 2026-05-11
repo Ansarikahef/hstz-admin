@@ -7,6 +7,10 @@ import HzPageHeader from "@/components/shared/HzPageHeader";
 import HzInput from "@/components/shared/HzInput";
 import { db, formatCurrency } from "@/lib/mockData";
 import { toast } from "sonner";
+import { useQuery } from "@tanstack/react-query";
+import apiService from "@/Utils/ApiService";
+import Helper from "@/Utils/Helper";
+import { set } from "date-fns";
 
 function MultiPicker({ label, options, selected, onChange, testid }) {
   return (
@@ -44,7 +48,8 @@ export default function PackageForm() {
   const isEdit = !!id;
   const [state] = useState(() => db.load());
   const existing = isEdit ? state.packages.find((p) => p.id === id) : null;
-
+  const [isLoading, setIsLoading] = useState(false);
+  const loggedInUser = Helper.getLoginUserDetails();
   const [form, setForm] = useState(() => existing ? { ...existing, durations: [...existing.durations], itinerary: [...existing.itinerary], images: [...(existing.images || [])] } : {
     name: "",
     description: "",
@@ -54,7 +59,7 @@ export default function PackageForm() {
     itinerary: [{ day: 1, title: "", destination: "", description: "" }],
     images: [],
     status: "active",
-    emiSupported: true,
+    emiSupported: false,
   });
   const [errors, setErrors] = useState({});
 
@@ -76,24 +81,84 @@ export default function PackageForm() {
     setErrors(e);
     return Object.keys(e).length === 0;
   };
-
-  const save = () => {
+  const clearForm = () => {
+    setForm({
+      name: "",
+      description: "",
+      categories: [],
+      destinations: [],
+      durations: [{ days: 5, price: 50000, emiPerMonth: 4500 }],
+      itinerary: [{ day: 1, title: "", destination: "", description: "" }],
+      images: [],
+      status: "active",
+      emiSupported: false,
+    });
+  };
+  const save = async() => {
     if (!validate()) {
       toast.error("Please correct the highlighted fields.");
       return;
     }
-    const s = db.load();
-    if (isEdit) {
-      const idx = s.packages.findIndex((p) => p.id === id);
-      s.packages[idx] = { ...s.packages[idx], ...form };
-    } else {
-      s.packages.unshift({ ...form, id: db.newId("pkg"), createdAt: new Date().toISOString() });
-    }
-    db.save(s);
-    toast.success(isEdit ? "Package updated" : "Package created", {
-      description: `${form.name} has been ${isEdit ? "saved" : "added"} to your catalog.`,
+    // const s = db.load();
+    // if (isEdit) {
+    //   const idx = s.packages.findIndex((p) => p.id === id);
+    //   s.packages[idx] = { ...s.packages[idx], ...form };
+    // } else {
+    //   s.packages.unshift({ ...form, id: db.newId("pkg"), createdAt: new Date().toISOString() });
+    // }
+    // db.save(s);
+    // toast.success(isEdit ? "Package updated" : "Package created", {
+    //   description: `${form.name} has been ${isEdit ? "saved" : "added"} to your catalog.`,
+    // });
+    // navigate("/packages");
+    console.log("Form data to be saved", form);
+    setIsLoading(true);
+    const formData = new FormData();
+
+    // Basic fields
+    formData.append("PackageName", form.name);
+    formData.append("Description", form.description);
+    formData.append("Status", form.status === "active" ? 1 : 0);
+    formData.append("UserId", loggedInUser.id ?? 0);
+
+    // Arrays as comma separated string
+    formData.append("CategoryIds", form.categories.join(","));
+    formData.append("DestinationIds", form.destinations.join(","));
+
+    // JSON fields
+    formData.append("Durations", JSON.stringify(form.durations));
+    formData.append("ItineraryJson", JSON.stringify(form.itinerary));
+
+
+    formData.append("IsEmiEnable", form.emiSupported);
+
+    // Multiple images
+    form.images.forEach((img) => {
+      formData.append("ImageFile", img.file);
     });
-    navigate("/packages");
+
+    console.log("FormData Payload");
+
+    for (let pair of formData.entries()) {
+      console.log(pair[0], pair[1]);
+    }
+    try{
+      const {status,message,responseValue} = await apiService.postMedia('admin/createPackage', formData);
+      if(status === 1){
+        toast.success(message || "Package saved");
+        clearForm();
+      }
+      else{
+        toast.error(message || "Failed to save package");
+      }
+    }
+    catch(err){
+      console.error("Error saving package", err);
+      toast.error("Failed to save package");
+    }
+    finally{
+       setIsLoading(false);
+    }
   };
 
   // Itinerary
@@ -120,16 +185,92 @@ export default function PackageForm() {
   const removeDuration = (i) => setForm((f) => ({ ...f, durations: f.durations.filter((_, idx) => idx !== i) }));
 
   // Images
+  // const onImagesUpload = (e) => {
+  //   const files = Array.from(e.target.files || []);
+  //   Promise.all(files.map((f) => new Promise((res) => {
+  //     const r = new FileReader();
+  //     r.onload = () => res(r.result);
+  //     r.readAsDataURL(f);
+  //   }))).then((urls) => setForm((f) => ({ ...f, images: [...f.images, ...urls] })));
+  // };
+  // const removeImage = (i) => setForm((f) => ({ ...f, images: f.images.filter((_, idx) => idx !== i) }));
   const onImagesUpload = (e) => {
     const files = Array.from(e.target.files || []);
-    Promise.all(files.map((f) => new Promise((res) => {
-      const r = new FileReader();
-      r.onload = () => res(r.result);
-      r.readAsDataURL(f);
-    }))).then((urls) => setForm((f) => ({ ...f, images: [...f.images, ...urls] })));
+  
+    if (!files.length) return;
+  
+    const imageList = files.map((file) => ({
+      file, // actual file for API
+      preview: URL.createObjectURL(file), // preview for UI
+    }));
+  
+    setForm((prev) => ({
+      ...prev,
+      images: [...prev.images, ...imageList],
+    }));
   };
-  const removeImage = (i) => setForm((f) => ({ ...f, images: f.images.filter((_, idx) => idx !== i) }));
+  
+  const removeImage = (index) => {
+    setForm((prev) => ({
+      ...prev,
+      images: prev.images.filter((_, i) => i !== index),
+    }));
+  };
+  const getDestinationList = async () => {
+    const { status, message, responseValue } =
+      await apiService.get("admin/GetDestinationList");
 
+    if (status === 1) {
+      return responseValue || [];
+    } else {
+      throw new Error(message || "Failed to fetch destination list");
+    }
+};
+const getCategoryList = async () => {
+    const { status, message, responseValue } =
+      await apiService.get("admin/GetCategoryList");
+
+    if (status === 1) {
+      return responseValue || [];
+    } else {
+      throw new Error(message || "Failed to fetch category list");
+    }
+  };
+  // React Query
+  const { data: categories = [] } = useQuery({
+    queryKey: ["categories"], 
+    queryFn: getCategoryList,
+    keepPreviousData: true,
+    staleTime: 5 * 60 * 1000,
+    cacheTime: 10 * 60 * 1000,
+    refetchOnWindowFocus: false
+  });
+  console.log("Fetched categories:", categories);
+// React Query
+  const { data: destination = [] } = useQuery({
+    queryKey: ["destinations"], 
+    queryFn: getDestinationList,
+    keepPreviousData: true,
+    staleTime: 5 * 60 * 1000,
+    cacheTime: 10 * 60 * 1000,
+    refetchOnWindowFocus: false
+  });
+  console.log("Destinations from API", destination);
+  console.log("Cate", state.categories);
+  const categoryList = useMemo(() => {
+    return categories.map((item) => ({
+      ...item,
+      id: item.categoryId,
+      name: item.categoryName,
+    }));
+  }, [categories]);
+  const destinationList = useMemo(() => {
+    return destination.map((item) => ({
+      ...item,
+      id: item.destinationId,
+      name: item.destinationName,
+    }));
+  }, [destination]);
   return (
     <div data-testid="package-form-page">
       <HzPageHeader
@@ -141,8 +282,11 @@ export default function PackageForm() {
             <button className="hz-btn-ghost" onClick={() => navigate(-1)} data-testid="package-form-back">
               <ArrowLeft className="size-4" strokeWidth={1.5} /> Back
             </button>
-            <button className="hz-btn-primary" onClick={save} data-testid="package-form-save">
-              <Save className="size-4" strokeWidth={1.75} /> {isEdit ? "Save changes" : "Create package"}
+            <button className="hz-btn-primary" onClick={save} data-testid="package-form-save" disabled={isLoading}>
+              <Save className="size-4" strokeWidth={1.75} /> {
+                isLoading ? "Saving..." :
+                (isEdit ? "Save changes" : "Create package")
+              }
             </button>
           </>
         }
@@ -172,9 +316,9 @@ export default function PackageForm() {
                 />
                 {errors.description && <div className="hz-input-error-msg">{errors.description}</div>}
               </div>
-              <MultiPicker label="Categories" options={state.categories} selected={form.categories} onChange={(v) => setForm({ ...form, categories: v })} testid="package-form-cat" />
+              <MultiPicker label="Categories" options={categoryList} selected={form.categories} onChange={(v) => setForm({ ...form, categories: v })} testid="package-form-cat" />
               {errors.categories && <div className="hz-input-error-msg">{errors.categories}</div>}
-              <MultiPicker label="Destinations" options={state.destinations} selected={form.destinations} onChange={(v) => setForm({ ...form, destinations: v })} testid="package-form-dest" />
+              <MultiPicker label="Destinations" options={destinationList} selected={form.destinations} onChange={(v) => setForm({ ...form, destinations: v })} testid="package-form-dest" />
               {errors.destinations && <div className="hz-input-error-msg">{errors.destinations}</div>}
             </div>
           </section>
@@ -302,12 +446,37 @@ export default function PackageForm() {
               <div className="text-xs text-[var(--hz-text-2)] mt-0.5">PNG, JPG up to 5MB each</div>
               <input type="file" accept="image/*" multiple className="hidden" onChange={onImagesUpload} data-testid="package-form-upload" />
             </label>
-            {form.images.length > 0 && (
+            {/* {form.images.length > 0 && (
               <div className="grid grid-cols-3 gap-2 mt-4">
                 {form.images.map((src, i) => (
                   <div key={i} className="relative aspect-square rounded-lg overflow-hidden group" data-testid={`package-form-image-${i}`}>
                     <img src={src} alt="" className="w-full h-full object-cover" />
                     <button onClick={() => removeImage(i)} className="absolute top-1 right-1 size-7 rounded-full bg-black/60 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition" data-testid={`package-form-image-remove-${i}`}>
+                      <X className="size-3.5" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )} */}
+            {form.images.length > 0 && (
+              <div className="grid grid-cols-3 gap-2 mt-4">
+                {form.images.map((img, i) => (
+                  <div
+                    key={i}
+                    className="relative aspect-square rounded-lg overflow-hidden group"
+                    data-testid={`package-form-image-${i}`}
+                  >
+                    <img
+                      src={img.preview}
+                      alt=""
+                      className="w-full h-full object-cover"
+                    />
+
+                    <button
+                      onClick={() => removeImage(i)}
+                      className="absolute top-1 right-1 size-7 rounded-full bg-black/60 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition"
+                      data-testid={`package-form-image-remove-${i}`}
+                    >
                       <X className="size-3.5" />
                     </button>
                   </div>

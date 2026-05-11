@@ -12,6 +12,8 @@ import {
   UserPlus,
   Mail,
   Phone,
+  Trash2,
+  UserCog,
 } from "lucide-react";
 import HzPageHeader from "@/components/shared/HzPageHeader";
 import UserDetailsModal from "@/components/modals/UserDetailsModal";
@@ -20,18 +22,28 @@ import { useQuery } from "@tanstack/react-query";
 import apiService from "@/Utils/ApiService";
 import { formatDate } from "@/lib/mockData"; // keep your formatter
 import Loader from "@/components/Loader/Loader";
+import ConfirmModal from "@/components/modals/ConfirmModal";
+import UpdateUserStatusModal from "@/components/modals/UpdateUserStatusModal";
+import Helper from "@/Utils/Helper";
+import { useQueryClient } from "@tanstack/react-query";
 
 
 
 export default function UserList() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
 
   const [q, setQ] = useState("");
+  const [isShowBtnLoader, setIsShowBtnLoader] = useState(false);
   const [filter, setFilter] = useState("all");
   const [page, setPage] = useState(1);
   const [openUser, setOpenUser] = useState(null);
   const [debouncedQ, setDebouncedQ] = useState("");
+  const [open, setOpen] = useState(false);
+  const [confirm, setConfirm] = useState({ open: false, id: null });
+  const [updateUserStatus, setUpdateUserStatus] = useState({ open: false, id: null });
   const pageSize = 6;
+  const loggedInUser = Helper.getLoginUserDetails();
   const getUserList = async (payload) => {
     const { status, message, responseValue } =
       await apiService.post("admin/GetUserList", payload);
@@ -40,6 +52,64 @@ export default function UserList() {
       return responseValue || [];
     } else {
       throw new Error(message || "Failed to fetch users");
+    }
+  };
+  const remove = async() => {
+    try{
+      setIsShowBtnLoader(true);
+      const payload = {
+        key: confirm.id ,
+        userId: loggedInUser?.id || 0,
+      }
+      const { status, message } = await apiService.post("admin/DeleteUser", payload);
+      console.log("Delete user response:", { status, message });
+      if(status === 1){
+        setConfirm({ open: false, id: null });
+        toast.success(message || "User removed");
+        queryClient.invalidateQueries({
+          queryKey: ["users"],
+        });
+      }
+      else{
+        toast.error(message || "Failed to remove user");
+      }
+    }
+    catch(e){
+      toast.error("Failed to remove user");
+    }
+    finally{
+      setIsShowBtnLoader(false);
+    }
+  };
+  const handleUpdateUserStatus = async (data) => {
+    console.log("Status update data:", data);
+    try{
+      setIsShowBtnLoader(true);
+      const payload = {
+        key: updateUserStatus.id,
+        userStatus: data.status,
+        userId: loggedInUser?.id || 0,
+        actionType: data.status === "Active" ? "User Account Activated" : data.status === "Inactive" ? "User Account Deactivated" : "User Account Suspended",
+        remark: data.remark?.trim() || (data.status === "Active" ? "User account has been successfully activated and restored." : data.status === "Inactive" ? "User account has been marked as inactive temporarily." : "User account has been suspended due to administrative action."),
+      }
+      const { status, message } = await apiService.post("admin/UpdateUserStatus", payload);
+      console.log("Update user status response:", { status, message });
+      if(status === 1){
+        setUpdateUserStatus({ open: false, id: null });
+        toast.success(message || "User status updated");
+        queryClient.invalidateQueries({
+          queryKey: ["users"],
+        });
+      }
+      else{
+        toast.error(message || "Failed to update user status");
+      }
+    }
+    catch(e){
+      toast.error("Failed to update user status");
+    }
+    finally{
+      setIsShowBtnLoader(false);
     }
   };
   // React Query
@@ -63,8 +133,7 @@ export default function UserList() {
     refetchOnWindowFocus: false,
     refetchOnMount: false,
   });
-  console.log("Fetched users:", users);
-  // ✅ Pagination from API
+  //Pagination from API
   const totalRecords = users.length > 0 ? users[0].totalRecords : 0;
   const totalPages = Math.max(1, Math.ceil(totalRecords / pageSize));
 
@@ -223,7 +292,7 @@ export default function UserList() {
                 <th className="px-5 py-3 text-start">Email</th>
                 <th className="px-5 py-3 text-start">Registered</th>
                 <th className="px-5 py-3 text-start">Bookings</th>
-                {/* <th className="px-5 py-3 text-right">Value</th> */}
+                <th className="px-5 py-3 text-start">Status</th>
                 <th className="px-5 py-3 text-right">Actions</th>
               </tr>
             </thead>
@@ -272,13 +341,28 @@ export default function UserList() {
                   </td>
 
                   <td className="px-5 py-3">0</td>
+                  <td className="px-5 py-3">
+                    <span
+                      className={`user-status-badge ${
+                        u.userStatus === "Active"
+                          ? "status-active"
+                          : u.userStatus === "Inactive"
+                          ? "status-inactive"
+                          : "status-suspend"
+                      }`}
+                    >
+                      {u.userStatus}
+                    </span>
+                  </td>
                   {/* <td className="px-5 py-3 text-right">₹0</td> */}
 
                   <td className="px-5 py-3">
                       <div className="flex justify-end gap-1">
                         <button onClick={() => setOpenUser(u)} className="hz-btn-ghost !h-9 !w-9 !p-0 justify-center" title="View details" data-testid={`user-view-${u.id}`}><Eye className="size-4" /></button>
                         <button onClick={() => navigate(`/users/${u.id}/transactions`)} className="hz-btn-ghost !h-9 !w-9 !p-0 justify-center" title="View transactions" data-testid={`user-txn-${u.id}`}><Receipt className="size-4" /></button>
-                        <button onClick={() => window.print()} className="hz-btn-ghost !h-9 !w-9 !p-0 justify-center" title="Print" data-testid={`user-print-${u.id}`}><Printer className="size-4" /></button>
+                        {/* <button onClick={() => window.print()} className="hz-btn-ghost !h-9 !w-9 !p-0 justify-center" title="Print" data-testid={`user-print-${u.id}`}><Printer className="size-4" /></button> */}
+                        <button onClick={() => setUpdateUserStatus({open: true, id : u.id ?? 0 })} className="hz-btn-ghost !h-9 !w-9 !p-0 justify-center" title="Update Status" data-testid={`user-print-${u.id}`}><UserCog  className="size-4" /></button>
+                        <button onClick={() => setConfirm({ open: true, id: u.id ?? 0 })} className="hz-btn-ghost !h-9 !w-9 !p-0 justify-center text-[var(--hz-error)]"><Trash2 className="size-4" /></button>
                       </div>
                     </td>
                 </tr>
@@ -330,6 +414,14 @@ export default function UserList() {
       <UserDetailsModal
         user={openUser}
         onClose={() => setOpenUser(null)}
+      />
+      <ConfirmModal open={confirm.open} onClose={() => setConfirm({ open: false, id: null })} onConfirm={remove} title="Delete User?" description="Deleting this user will permanently remove their account and related access details." confirmLabel={isShowBtnLoader ? 'Deleting...' : 'Delete'} isBtnDisabled={isShowBtnLoader} tone="danger" testid="user-delete" />
+      <UpdateUserStatusModal
+        isOpen={updateUserStatus.open}
+        onClose={() => setUpdateUserStatus({ open: false, id: null })}
+        onSubmit={(data) => handleUpdateUserStatus(data)}
+        userName="Kahef Ansari"
+        isLoading={isShowBtnLoader}
       />
       <Loader isLoading={isLoading} />
     </div>
