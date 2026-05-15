@@ -1,12 +1,13 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
   User, Mail, Phone, Lock, MapPin, ArrowLeft, ArrowRight, Compass,
   MessageCircle, Calendar, ShieldCheck, KeyRound, UserCog, Users as UsersIcon,
 } from "lucide-react";
 import HzInput from "@/components/shared/HzInput";
-import { db } from "@/lib/mockData";
 import { toast } from "sonner";
+import { INDIA_STATES } from "@/Utils/Data/State";
+import { INDIA_CITIES } from "@/Utils/Data/Cities";
 import apiService from "../Utils/ApiService";
 import HzPageHeader from "@/components/shared/HzPageHeader";
 
@@ -26,6 +27,10 @@ function Section({ kicker, title, description, children }) {
 
 export default function Register() {
   const navigate = useNavigate();
+  const [stateList, setStateList] = useState(INDIA_STATES);
+  const [cityList, setCityList] = useState([]);
+  const [selectdState, setSelectdState] = useState(26);
+  const [selectedCity, setSelectedCity] = useState(0);
   const [form, setForm] = useState({
     firstName: "",
     lastName: "",
@@ -37,6 +42,8 @@ export default function Register() {
     whatsAppNumber: "",
     sameWhatsApp: true,
     emailId: "",
+    state: "",
+    city: "",
     address: "",
     password: "",
     confirmPassword: "",
@@ -65,12 +72,16 @@ export default function Register() {
     if (!form.gender) e.gender = "Pick a gender.";
     if (!form.dateOfBirth) e.dateOfBirth = "Date of birth is required.";
     else if (new Date(form.dateOfBirth) > new Date()) e.dateOfBirth = "DOB cannot be in the future.";
+    if (!form.guardianName.trim()) e.guardianName = "GuardianName name is required.";
     if (form.guardianName && !form.guardianRelation) e.guardianRelation = "Pick relation.";
     if (!form.mobileNumber.trim()) e.mobileNumber = "Mobile is required.";
     else if (form.mobileNumber.replace(/\D/g, "").length < 8) e.mobileNumber = "Mobile looks too short.";
     if (form.whatsAppNumber && form.whatsAppNumber.replace(/\D/g, "").length < 8) e.whatsAppNumber = "WhatsApp looks too short.";
-    if (!form.emailId.trim()) e.emailId = "Email is required.";
-    else if (!/^\S+@\S+\.\S+$/.test(form.emailId)) e.emailId = "Enter a valid email.";
+    if (form.emailId.trim() && !/^\S+@\S+\.\S+$/.test(form.emailId)) {
+      e.emailId = "Enter a valid email.";
+    }
+    if (!form.state.trim()) e.state = "State is required.";
+    if (!form.city.trim()) e.city = "City is required.";
     if (!form.address.trim()) e.address = "Address is required.";
     if (!form.password) e.password = "Password is required.";
     else if (form.password.length < 6) e.password = "At least 6 characters.";
@@ -84,6 +95,8 @@ export default function Register() {
     return Object.keys(e).length === 0;
   };
   const resetForm = () => {
+    setSelectdState(0);
+    setSelectdState(26);
     setForm({
       firstName: "",
       lastName: "",
@@ -95,6 +108,8 @@ export default function Register() {
       whatsAppNumber: "",
       sameWhatsApp: true,
       emailId: "",
+      state: "",
+      city: "",
       address: "",
       password: "",
       confirmPassword: "",
@@ -112,7 +127,7 @@ export default function Register() {
       return;
     }
     setSubmitting(true);
-    await new Promise((r) => setTimeout(r, 600));
+    //await new Promise((r) => setTimeout(r, 600));
 
     const passwordHash = (typeof window !== "undefined" && window.btoa) ? window.btoa(form.password) : form.password;
     const payload = {
@@ -133,6 +148,8 @@ export default function Register() {
       isEmailVerified: true,
       // ✅ Admin fields
       createdByAdmin: true,
+      state: form.state,
+      city: form.city,
       remark:form.adminRemarks || "Registered by admin via web portal.",
       adminUserId: 1 
     };
@@ -154,7 +171,32 @@ export default function Register() {
       setSubmitting(false);
     }
   };
+  useEffect(()=>{
+    const cities = INDIA_CITIES.filter((x) => x.stateId === selectdState);
+    console.log("Filtered cities for stateId", selectdState, cities);
+    setCityList(cities);
+     // Get State Name
+    const stateName =
+    selectdState && selectdState !== 0
+      ? INDIA_STATES.find(
+          (x) => x.id === selectdState
+        )?.name ?? ""
+      : "";
 
+    // Get City Name
+    const cityName =
+      selectedCity && Number(selectedCity) !== 0
+        ? INDIA_CITIES.find(
+            (x) => x.id === Number(selectedCity)
+          )?.name ?? ""
+        : "";
+    // Update Form Data
+    setForm((prev) => ({
+      ...prev,
+      state: stateName,
+      city: cityName,
+    }));
+  },[selectdState,selectedCity])
   return (
     <div data-testid="user-list-page">
       <HzPageHeader
@@ -184,7 +226,7 @@ export default function Register() {
           </Section>
 
           <Section kicker="Guardian" title="Guardian details" description="Optional — useful for minors or for emergency reference.">
-            <HzInput label="Guardian name" icon={UsersIcon} placeholder="Optional" value={form.guardianName} onChange={setField("guardianName")} testid="register-guardian-name" />
+            <HzInput label="Guardian name" icon={UsersIcon} placeholder="Optional" value={form.guardianName} onChange={setField("guardianName")} testid="register-guardian-name" error={errors.guardianName} />
             <div>
               <label className="hz-label block mb-2">Relation</label>
               <select className={`hz-input !pl-4 ${errors.guardianRelation ? "hz-input--error" : ""}`} data-testid="register-guardian-relation" value={form.guardianRelation} onChange={setField("guardianRelation")}>
@@ -195,9 +237,9 @@ export default function Register() {
           </Section>
 
           <Section kicker="Contact" title="How can we reach them?" description="Mobile and email are required for booking confirmations.">
-            <HzInput label="Mobile number" icon={Phone} placeholder="+91 98765 43210" value={form.mobileNumber} onChange={setField("mobileNumber")} error={errors.mobileNumber} testid="register-mobile" />
+            <HzInput label="Mobile number" icon={Phone} placeholder="+91 98765 43210" value={form.mobileNumber} onChange={setField("mobileNumber")} error={errors.mobileNumber} testid="register-mobile" onlyNumber={true}  maxLength={10} />
             <div>
-              <HzInput label="WhatsApp number" icon={MessageCircle} placeholder="+91 98765 43210" value={form.whatsAppNumber} onChange={setField("whatsAppNumber")} error={errors.whatsAppNumber} testid="register-whatsapp" disabled={form.sameWhatsApp} />
+              <HzInput label="WhatsApp number" icon={MessageCircle} placeholder="+91 98765 43210" value={form.whatsAppNumber} onChange={setField("whatsAppNumber")} error={errors.whatsAppNumber} testid="register-whatsapp" disabled={form.sameWhatsApp} onlyNumber={true}  maxLength={10} />
               <label className="mt-2 inline-flex items-center gap-2 text-xs text-[var(--hz-text-2)] cursor-pointer">
                 <input
                   type="checkbox"
@@ -210,12 +252,28 @@ export default function Register() {
               </label>
             </div>
             <HzInput label="Email" icon={Mail} type="email" placeholder="you@email.com" value={form.emailId} onChange={setField("emailId")} error={errors.emailId} testid="register-email" />
-            <div className="sm:col-span-2">
-              <HzInput label="Address" icon={MapPin} placeholder="Street, City, Country" value={form.address} onChange={setField("address")} error={errors.address} testid="register-address" />
+            <div>
+              <label className="hz-label block mb-2">State</label>
+              <select className={`hz-input !pl-4 ${errors.state ? "hz-input--error" : ""}`} data-testid="register-state" value={selectdState} onChange={(e)=>{setSelectdState(e.target.value)}}>
+                {stateList.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+              </select>
+              {errors.state && <div className="hz-input-error-msg">{errors.state}</div>}
             </div>
+            <div>
+              <label className="hz-label block mb-2">City</label>
+              <select className={`hz-input !pl-4 ${errors.city ? "hz-input--error" : ""}`} data-testid="register-city" value={selectedCity} onChange={(e)=>{setSelectedCity(e.target.value)}}>
+                <option value="0">Select City</option>
+                {cityList.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+              </select>
+              {errors.city && <div className="hz-input-error-msg">{errors.city}</div>}
+            </div>
+              <HzInput label="Address" icon={MapPin} placeholder="Street, City, Country" value={form.address} onChange={setField("address")} error={errors.address} testid="register-address" />
+            {/* <div className="sm:col-span-2">
+              <HzInput label="Address" icon={MapPin} placeholder="Street, City, Country" value={form.address} onChange={setField("address")} error={errors.address} testid="register-address" />
+            </div> */}
           </Section>
 
-          <Section kicker="Security" title="Password & MPIN" description="Set a password for the web portal and a 4–6 digit MPIN for the mobile app.">
+          <Section kicker="Security" title="Password & MPIN" description="Set a password for the web portal and a 6 digit MPIN for the mobile app.">
             <HzInput label="Password" icon={Lock} type="password" placeholder="••••••••" value={form.password} onChange={setField("password")} error={errors.password} testid="register-password" />
             <HzInput label="Confirm password" icon={Lock} type="password" placeholder="••••••••" value={form.confirmPassword} onChange={setField("confirmPassword")} error={errors.confirmPassword} testid="register-confirm-password" />
             <HzInput label="MPIN (6 digits)" icon={KeyRound} type="password" inputMode="numeric" maxLength={6} placeholder="••••" value={form.mpin} onChange={setField("mpin")} error={errors.mpin} testid="register-mpin" />

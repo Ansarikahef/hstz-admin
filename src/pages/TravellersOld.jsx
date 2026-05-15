@@ -21,7 +21,7 @@ function fmtMonth(m) {
   return `${MONTH_FULL[parseInt(mo, 10) - 1]} ${y}`;
 }
 
-export default function Travellers() {
+export default function TravellersOld() {
   const [state, setState] = useState(() => db.load());
   const [docOpen, setDocOpen] = useState(null);
   const [docForm, setDocForm] = useState({ name: "", type: "passport", url: "" });
@@ -142,9 +142,9 @@ export default function Travellers() {
                   <TableIcon className="size-3.5" /> Table
                 </button>
               </div>
-              {/* <button className="hz-btn-primary" onClick={printTable} data-testid="travellers-print">
+              <button className="hz-btn-primary" onClick={printTable} data-testid="travellers-print">
                 <Printer className="size-4" strokeWidth={1.75} /> Print
-              </button> */}
+              </button>
             </>
           }
         />
@@ -192,7 +192,7 @@ export default function Travellers() {
             </div>
             <div className="md:col-span-6 flex items-center justify-between gap-3">
               <div className="text-xs text-[var(--hz-text-2)] inline-flex items-center gap-1.5">
-                <Filter className="size-3.5" /> {0} of {0} traveller
+                <Filter className="size-3.5" /> {filtered.length} of {allTravellers.length} traveller{allTravellers.length === 1 ? "" : "s"}
               </div>
               {filtersActive && (
                 <button onClick={clearFilters} className="text-xs text-[var(--hz-cta)] inline-flex items-center gap-1 hover:underline" data-testid="travellers-filter-clear">
@@ -221,7 +221,7 @@ export default function Travellers() {
       {/* CARDS VIEW */}
       {view === "cards" && (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5 hz-no-print">
-          {(1==2) && filtered.map((t) => {
+          {filtered.map((t) => {
             const pkg = state.packages.find((p) => p.id === t.packageId);
             const fullName = t.firstName && t.lastName ? `${t.firstName} ${t.lastName}` : t.name;
             return (
@@ -310,7 +310,7 @@ export default function Travellers() {
               </div>
             );
           })}
-          {0 === 0 && (
+          {filtered.length === 0 && (
             <div className="hz-card p-12 col-span-full text-center" data-testid="travellers-empty">
               <div className="hz-heading text-lg mb-1">No travellers match these filters</div>
               <div className="text-sm text-[var(--hz-text-2)]">Try clearing filters or expanding the date range.</div>
@@ -338,7 +338,7 @@ export default function Travellers() {
                 </tr>
               </thead>
               <tbody>
-                {(1==2) && filtered.map((t) => {
+                {filtered.map((t) => {
                   const pkg = state.packages.find((p) => p.id === t.packageId);
                   const fullName = t.firstName && t.lastName ? `${t.firstName} ${t.lastName}` : t.name;
                   return (
@@ -386,7 +386,7 @@ export default function Travellers() {
                     </tr>
                   );
                 })}
-                {0 === 0 && (
+                {filtered.length === 0 && (
                   <tr><td colSpan={9} className="px-4 py-12 text-center text-sm text-[var(--hz-text-2)]">No travellers match these filters.</td></tr>
                 )}
               </tbody>

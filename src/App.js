@@ -22,6 +22,8 @@ import { useAuth } from "@/hooks/useAuth";
 import { db } from "@/lib/mockData";
 import UserListOld from "./pages/users/UserList copy";
 import PackageDetailV2 from "./pages/packages/PackageDetailV2";
+import TravellersOld from "./pages/TravellersOld";
+import WinnersOld from "./pages/WinnersOld";
 
 function ProtectedRoute({ children }) {
   const { isAuthed } = useAuth();
@@ -65,6 +67,8 @@ function App() {
             <Route path="/users2" element={<UserListOld />} />
             <Route path="/users/:id/transactions" element={<UserTransactions />} />
             <Route path="/travellers" element={<Travellers />} />
+            <Route path="/travellers-old" element={<TravellersOld />} />
+            <Route path="/winners-old" element={<WinnersOld />} />
             <Route path="/winners" element={<Winners />} />
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
           </Route>

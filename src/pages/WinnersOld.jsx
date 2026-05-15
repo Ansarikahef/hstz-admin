@@ -17,7 +17,7 @@ function fmtMonth(m) {
   return `${MONTH_FULL[parseInt(mo, 10) - 1]} ${y}`;
 }
 
-export default function Winners() {
+export default function WinnersOld() {
   const [state] = useState(() => db.load());
   const [q, setQ] = useState("");
   const [month, setMonth] = useState("all");
@@ -137,21 +137,21 @@ export default function Winners() {
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5 mb-6">
           <HzStatCard
             label="Total winners"
-            value={0}
+            value={winners.length}
             icon={Trophy}
             accent="cta"
             testid="winners-stat-total"
           />
           <HzStatCard
             label="This month"
-            value={0}
+            value={thisMonthCount}
             icon={Sparkles}
             accent="success"
             testid="winners-stat-month"
           />
           <HzStatCard
             label="Across packages"
-            value={0}
+            value={uniquePackages}
             icon={Layers}
             accent="info"
             testid="winners-stat-packages"
@@ -164,11 +164,11 @@ export default function Winners() {
               </div>
             </div>
             <div className="mt-3 hz-heading text-lg font-medium leading-tight truncate">
-              {"No winners yet"}
+              {latestName || "No winners yet"}
             </div>
-            {/* <div className="text-xs text-[var(--hz-text-2)] mt-1">
+            <div className="text-xs text-[var(--hz-text-2)] mt-1">
               {latest ? `${fmtMonth(latest.winnerInfo.month)} · marked ${formatDate(latest.winnerInfo.markedAt)}` : "Mark a traveller from the Travellers page."}
-            </div> */}
+            </div>
           </div>
         </div>
 
@@ -205,12 +205,12 @@ export default function Winners() {
                 data-testid="winners-filter-package"
               >
                 <option value="all">All packages</option>
-                {(1==2) && state.packages.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+                {state.packages.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
               </select>
             </div>
             <div className="md:col-span-12 flex items-center justify-between">
               <div className="text-xs text-[var(--hz-text-2)] inline-flex items-center gap-1.5">
-                <Filter className="size-3.5" /> {0} of {0} winner
+                <Filter className="size-3.5" /> {filtered.length} of {winners.length} winner{winners.length === 1 ? "" : "s"}
               </div>
               {filtersActive && (
                 <button onClick={clearFilters} className="text-xs text-[var(--hz-cta)] inline-flex items-center gap-1 hover:underline" data-testid="winners-filter-clear">
@@ -250,7 +250,7 @@ export default function Winners() {
         </div>
       ) : (
         <div className="space-y-8" data-testid="winners-list">
-          {(1==2) && grouped.map(([m, items]) => (
+          {grouped.map(([m, items]) => (
             <section key={m} data-testid={`winners-group-${m}`}>
               <div className="flex items-end justify-between border-b border-[var(--hz-border)] pb-3 mb-4">
                 <div>

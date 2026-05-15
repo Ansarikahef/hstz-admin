@@ -75,6 +75,20 @@ const Helper ={
           return null
         }
       },
+      restrictInputLength(e, maxLength) {
+        const input = e.target;
+      
+        if (input.value.length > maxLength) {
+          input.value = input.value.slice(0, maxLength);
+        }
+      },
+      restrictNumberLength(e, maxLength) {
+        let value = e.target.value;
+        // Remove non-numeric characters
+        value = value.replace(/\D/g, "");
+        // Restrict length
+        e.target.value = value.slice(0, maxLength);
+      }
 }
 
 export default Helper

@@ -65,11 +65,17 @@ export default function Dashboard() {
         // }
       />
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5">
+      {/* <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5">
         <HzStatCard label="Total Bookings" value={totalBookings} delta={12.4} deltaLabel="vs last month" icon={CalendarRange} accent="default" testid="stat-bookings" />
         <HzStatCard label="Total Sales" value={formatCurrency(totalSales)} delta={8.2} deltaLabel="vs last month" icon={IndianRupee} accent="cta" testid="stat-sales" />
         <HzStatCard label="Active Packages" value={activePackages} delta={2.1} deltaLabel="new this week" icon={PackageIcon} accent="success" testid="stat-packages" />
         <HzStatCard label="Visitors" value={visitors.toLocaleString()} delta={-1.8} deltaLabel="vs last week" icon={Eye} accent="info" testid="stat-visitors" />
+      </div> */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5">
+        <HzStatCard label="Total Bookings" value={0}  icon={CalendarRange} accent="default" testid="stat-bookings" />
+        <HzStatCard label="Total Sales" value={0}  icon={IndianRupee} accent="cta" testid="stat-sales" />
+        {/* <HzStatCard label="Active Packages" value={0} delta={2.1} deltaLabel="new this week" icon={PackageIcon} accent="success" testid="stat-packages" /> */}
+        <HzStatCard label="Visitors" value={0}  icon={Eye} accent="info" testid="stat-visitors" />
       </div>
 
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-5 mt-6">
@@ -85,7 +91,7 @@ export default function Dashboard() {
             </div>
           </div>
           <div style={{ width: "100%", height: 280 }}>
-            <ResponsiveContainer>
+            {/* <ResponsiveContainer>
               <AreaChart data={trendData} margin={{ top: 5, right: 8, left: -10, bottom: 0 }}>
                 <defs>
                   <linearGradient id="gPine" x1="0" y1="0" x2="0" y2="1">
@@ -108,7 +114,7 @@ export default function Dashboard() {
                 <Area yAxisId="left" type="monotone" dataKey="bookings" stroke="#162D24" strokeWidth={2} fill="url(#gPine)" />
                 <Area yAxisId="right" type="monotone" dataKey="revenue" stroke="#D9734E" strokeWidth={2} fill="url(#gCta)" />
               </AreaChart>
-            </ResponsiveContainer>
+            </ResponsiveContainer> */}
           </div>
         </div>
 
@@ -116,14 +122,14 @@ export default function Dashboard() {
           <span className="hz-label">Visitor sources</span>
           <h3 className="hz-heading text-xl mt-1 mb-4">By channel</h3>
           <div style={{ width: "100%", height: 220 }}>
-            <ResponsiveContainer>
+            {/* <ResponsiveContainer>
               <PieChart>
                 <Pie data={visitorPie} dataKey="value" innerRadius={55} outerRadius={85} paddingAngle={2} stroke="none">
                   {visitorPie.map((e) => <Cell key={e.name} fill={e.fill} />)}
                 </Pie>
                 <Tooltip contentStyle={{ borderRadius: 12, border: "1px solid #E5E2D9" }} />
               </PieChart>
-            </ResponsiveContainer>
+            </ResponsiveContainer> */}
           </div>
           <div className="grid grid-cols-2 gap-2 mt-2">
             {visitorPie.map((v) => (
@@ -136,7 +142,7 @@ export default function Dashboard() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-5 mt-6">
+      <div className="grid grid-cols-1 xl:grid-cols-1 gap-5 mt-6">
         <div className="hz-card p-6 xl:col-span-2" data-testid="recent-bookings">
           <div className="flex items-center justify-between mb-5">
             <div>
@@ -159,7 +165,7 @@ export default function Dashboard() {
                 </tr>
               </thead>
               <tbody>
-                {recentBookings.map((b) => {
+                {(1==2) && recentBookings.map((b) => {
                   const u = userById(b.userId);
                   const p = pkgById(b.packageId);
                   return (
@@ -180,7 +186,7 @@ export default function Dashboard() {
           </div>
         </div>
 
-        <div className="hz-card p-6" data-testid="top-packages">
+        {/* <div className="hz-card p-6" data-testid="top-packages">
           <span className="hz-label">Demand</span>
           <h3 className="hz-heading text-xl mt-1 mb-4">Top selling packages</h3>
           <div style={{ width: "100%", height: 240 }}>
@@ -194,7 +200,7 @@ export default function Dashboard() {
               </BarChart>
             </ResponsiveContainer>
           </div>
-        </div>
+        </div> */}
       </div>
     </div>
   );
