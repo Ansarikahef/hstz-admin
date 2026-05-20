@@ -24,6 +24,7 @@ import UserListOld from "./pages/users/UserList copy";
 import PackageDetailV2 from "./pages/packages/PackageDetailV2";
 import TravellersOld from "./pages/TravellersOld";
 import WinnersOld from "./pages/WinnersOld";
+import Bookings from "./pages/Bookings";
 
 function ProtectedRoute({ children }) {
   const { isAuthed } = useAuth();
@@ -65,6 +66,7 @@ function App() {
             <Route path="/destinations" element={<DestinationMaster />} />
             <Route path="/users" element={<UserList />} />
             <Route path="/users2" element={<UserListOld />} />
+            <Route path="/bookings" element={<Bookings />} />
             <Route path="/users/:id/transactions" element={<UserTransactions />} />
             <Route path="/travellers" element={<Travellers />} />
             <Route path="/travellers-old" element={<TravellersOld />} />

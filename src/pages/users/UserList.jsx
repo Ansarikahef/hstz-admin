@@ -420,7 +420,7 @@ export default function UserList() {
         isOpen={updateUserStatus.open}
         onClose={() => setUpdateUserStatus({ open: false, id: null })}
         onSubmit={(data) => handleUpdateUserStatus(data)}
-        userName="Kahef Ansari"
+        userName=""
         isLoading={isShowBtnLoader}
       />
       <Loader isLoading={isLoading} />

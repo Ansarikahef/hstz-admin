@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import {
   ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid,
   PieChart, Pie, Cell, BarChart, Bar, Legend,
@@ -9,18 +9,25 @@ import HzPageHeader from "@/components/shared/HzPageHeader";
 import HzStatCard from "@/components/shared/HzStatCard";
 import { Link } from "react-router-dom";
 import Helper from "@/Utils/Helper";
+import { useQuery } from "@tanstack/react-query";
+import apiService from "@/Utils/ApiService";
+import { array } from "zod";
+import Loader from "@/components/Loader/Loader";
 
 export default function Dashboard() {
   const state = db.load();
   const { bookings, packages, transactions, users } = state;
-
+  const [bookingNo, setBookingNo] = useState("");
+  const [bookingStatus, setBookingStatus] = useState("all");
+  const [fromDate, setFromDate] = useState("");
+  const [toDate, setToDate] = useState("");
+  const [debouncedBookingNo, setDebouncedBookingNo] = useState("");
   const totalBookings = bookings.length;
   const totalSales = transactions.filter((t) => t.status === "paid").reduce((s, t) => s + t.amount, 0);
   const activePackages = packages.filter((p) => p.status === "active").length;
   const visitors = 12480;
 
   const loggedInUser = Helper.getLoginUserDetails() ?? null; 
-  console.log("Logged in user details:", loggedInUser);
 
   const trendData = useMemo(() => {
     const months = ["Aug", "Sep", "Oct", "Nov", "Dec", "Jan", "Feb"];
@@ -49,7 +56,45 @@ export default function Dashboard() {
 
   const userById = (id) => users.find((u) => u.id === id);
   const pkgById = (id) => packages.find((p) => p.id === id);
-
+  const getBookingList = async (payload) => {
+    console.log("API Payload:", payload);
+    const { status, message, responseValue } =
+      await apiService.get(`admin/GetBookingList?userId=${loggedInUser.id}&bookingStatus=Recent Bookings`);
+  
+    if (status === 1) {
+      return responseValue || [];
+    }
+  
+    throw new Error(message || "Failed to fetch booking list");
+  };
+  // React Query
+  const { data: bookingList = [], isLoading } = useQuery({
+    queryKey: [
+      "bookingList",
+      debouncedBookingNo,
+      bookingStatus,
+      fromDate,
+      toDate,
+    ],
+  
+    queryFn: () =>
+      getBookingList({
+        bookingNo: debouncedBookingNo || null,
+        bookingStatus:
+          bookingStatus === "all" ? null : bookingStatus,
+        fromDate: fromDate || null,
+        toDate: toDate || null,
+      }),
+  
+    keepPreviousData: true,
+  
+    // caching
+    staleTime: 5 * 60 * 1000,
+    cacheTime: 10 * 60 * 1000,
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
+  });
+  console.log("Booking List:", bookingList);
   return (
     <div data-testid="dashboard-page">
       <HzPageHeader
@@ -149,38 +194,149 @@ export default function Dashboard() {
               <span className="hz-label">Activity</span>
               <h3 className="hz-heading text-xl mt-1">Recent bookings</h3>
             </div>
-            <Link to="/users" className="text-sm text-[var(--hz-cta)] font-medium inline-flex items-center gap-1 hover:underline">
+            <Link to="/bookings" className="text-sm text-[var(--hz-cta)] font-medium inline-flex items-center gap-1 hover:underline">
               View all <ArrowUpRight className="size-3.5" />
             </Link>
           </div>
-          <div className="overflow-x-auto -mx-6">
-            <table className="w-full text-sm">
+          <div className="overflow-x-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent">
+            <table className="min-w-[1000px] w-full text-sm">
               <thead>
-                <tr className="text-left">
+                <tr className="text-left border-b border-[var(--hz-border-soft)]">
                   <th className="px-6 py-3 hz-label !text-[10px]">Booking</th>
                   <th className="px-6 py-3 hz-label !text-[10px]">Traveller</th>
                   <th className="px-6 py-3 hz-label !text-[10px]">Package</th>
-                  <th className="px-6 py-3 hz-label !text-[10px]">Date</th>
-                  <th className="px-6 py-3 hz-label !text-[10px] text-right">Amount</th>
+                  <th className="px-6 py-3 hz-label !text-[10px]">Booking Date</th>
+                  <th className="px-6 py-3 hz-label !text-[10px] txtNoWrap">Package Type</th>
+                  <th className="px-6 py-3 hz-label !text-[10px]">Status</th>
+                  <th className="px-6 py-3 hz-label !text-[10px] text-right">
+                    Amount
+                  </th>
                 </tr>
               </thead>
               <tbody>
-                {(1==2) && recentBookings.map((b) => {
-                  const u = userById(b.userId);
-                  const p = pkgById(b.packageId);
-                  return (
-                    <tr key={b.id} className="border-t border-[var(--hz-border-soft)] hover:bg-[var(--hz-hover)]">
-                      <td className="px-6 py-3 hz-mono text-[12px]">{b.id}</td>
-                      <td className="px-6 py-3 flex items-center gap-2.5">
-                        <img src={u?.avatar} className="size-7 rounded-full object-cover" alt="" />
-                        <span className="font-medium">{u?.firstName} {u?.lastName}</span>
-                      </td>
-                      <td className="px-6 py-3 text-[var(--hz-text-2)]">{p?.name}</td>
-                      <td className="px-6 py-3 text-[var(--hz-text-2)]">{formatDate(b.bookingDate)}</td>
-                      <td className="px-6 py-3 hz-mono text-right">{formatCurrency(b.totalAmount)}</td>
-                    </tr>
-                  );
-                })}
+                {Array.isArray(bookingList) &&
+                  bookingList.length > 0 ? (
+                  bookingList.map((b) => {
+                    const statusColors = {
+                      Pending:
+                        "bg-yellow-100 text-yellow-700 border-yellow-200",
+                      Confirmed:
+                        "bg-green-100 text-green-700 border-green-200",
+                      Cancelled:
+                        "bg-red-100 text-red-700 border-red-200",
+                      Completed:
+                        "bg-blue-100 text-blue-700 border-blue-200",
+                    };
+
+                    const packageColors = {
+                      Domestic:
+                        "bg-purple-100 text-purple-700 border-purple-200",
+                      International:
+                        "bg-indigo-100 text-indigo-700 border-indigo-200",
+                      Premium:
+                        "bg-pink-100 text-pink-700 border-pink-200",
+                    };
+
+                    return (
+                      <tr
+                        key={b.bookingId}
+                        className={`border-t border-[var(--hz-border-soft)] hover:bg-[var(--hz-hover)] transition`}
+                        // // ${
+                        // //   b?.bookingStatus === "Pending"
+                        // //     ? "pending-row"
+                        // //     : ""
+                        // // }
+                      >
+                        {/* Booking */}
+                        <td className="px-6 py-4">
+                          <div className="hz-mono text-[12px] font-semibold">
+                            {b.bookingNo}
+                          </div>
+                        </td>
+
+                        {/* Traveller */}
+                        <td className="px-6 py-4">
+                          <div className="flex items-center gap-3">
+                            <div className="size-8 rounded-full bg-primary text-white flex items-center justify-center text-xs font-semibold uppercase shadow-sm">
+                              {`${b?.firstName?.[0] || ""}${
+                                b?.lastName?.[0] || ""
+                              }`}
+                            </div>
+
+                            <div>
+                              <div className="font-medium text-[13px]">
+                                {b?.firstName} {b?.lastName}
+                              </div>
+
+                              <div className="text-[11px] text-[var(--hz-text-3)]">
+                                {b?.mobileNumber}
+                              </div>
+                            </div>
+                          </div>
+                        </td>
+
+                        {/* Package */}
+                        <td className="px-6 py-4 text-[var(--hz-text-2)] font-medium">
+                          {b?.packageName}
+                        </td>
+
+                        {/* Date */}
+                        <td className="px-6 py-4 text-[var(--hz-text-2)] whitespace-nowrap">
+                          {b?.bookingDate}
+                        </td>
+
+                        {/* Package Type Badge */}
+                        <td className="px-6 py-4">
+                          <span
+                            className={`inline-flex items-center rounded-full border px-3 py-1 text-[11px] font-medium ${
+                              packageColors[b?.packageType] ||
+                              "bg-gray-100 text-gray-700 border-gray-200"
+                            }`}
+                          >
+                            {b?.packageType}
+                          </span>
+                        </td>
+
+                        {/* Status Badge */}
+                        <td className="px-6 py-4">
+                          <span
+                            className={`inline-flex items-center rounded-full border px-3 py-1 text-[11px] font-semibold ${
+                              statusColors[b?.bookingStatus] ||
+                              "bg-gray-100 text-gray-700 border-gray-200"
+                            }`}
+                          >
+                            {b?.bookingStatus}
+                          </span>
+                        </td>
+
+                        {/* Amount */}
+                        <td className="px-6 py-4 hz-mono text-right font-semibold whitespace-nowrap">
+                          {formatCurrency(b?.totalAmount)}
+                        </td>
+                      </tr>
+                    );
+                  })
+                  ): (
+                  <tr>
+                    <td colSpan={7} className="py-16 text-center">
+                      <div className="flex flex-col items-center justify-center">
+                        <div className="size-16 rounded-full bg-gray-100 flex items-center justify-center text-2xl">
+                          📦
+                        </div>
+
+                        <h3 className="mt-4 text-sm font-semibold text-gray-700">
+                          No Bookings Found
+                        </h3>
+
+                        <p className="mt-1 text-xs text-gray-500">
+                          {/* No booking records are available for the selected filters. */}
+                          No booking records are available right now.
+
+                        </p>
+                      </div>
+                    </td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>
@@ -202,6 +358,7 @@ export default function Dashboard() {
           </div>
         </div> */}
       </div>
+      <Loader isLoading={isLoading} />
     </div>
   );
 }

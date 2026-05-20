@@ -52,6 +52,7 @@ const apiService = {
   },
 
   post: async function (endpoint, data = {}, options = {}) {
+    console.log('config.API_BASE_URL ',config.API_BASE_URL)
     try {
       const token = localStorage.getItem("hstzAuthToken") ?? null;
       const { auth = false } = options
