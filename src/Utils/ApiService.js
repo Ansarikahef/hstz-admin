@@ -39,7 +39,14 @@ const apiService = {
           ...(token && { Authorization: `Bearer ${token}` })
         },
       })
-
+      if (response.status === 401) {
+        localStorage.removeItem("hstzAuthToken");
+        localStorage.removeItem("user");
+  
+        navigateTo("/login");
+  
+        return;
+      }
       return await this.handleResponse(response)
     } catch (error) {
       return {
@@ -66,6 +73,14 @@ const apiService = {
         },
         body: JSON.stringify(payload),
       })
+      if (response.status === 401) {
+        localStorage.removeItem("hstzAuthToken");
+        localStorage.removeItem("user");
+  
+        navigateTo("/login");
+  
+        return;
+      }
       return await this.handleResponse(response)
     } catch (error) {
       return {
@@ -88,7 +103,14 @@ const apiService = {
         },
         body: data,
       })
-
+      if (response.status === 401) {
+        localStorage.removeItem("hstzAuthToken");
+        localStorage.removeItem("user");
+  
+        navigateTo("/login");
+  
+        return;
+      }
       return await this.handleResponse(response)
     } catch (error) {
       return {

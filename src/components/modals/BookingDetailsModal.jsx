@@ -5,9 +5,16 @@ import DocumentViewerModal from "./DocumentViewerModal";
 import {
   User, Mail, Phone, MapPin, Calendar, FileText, Eye,
   Plane, Heart, ShieldAlert, BadgeCheck, Receipt, Printer, XCircle, Trophy,
+  Shield,
 } from "lucide-react";
+import { toast } from "sonner";
 import { db, formatCurrency, formatDate, formatDateTime } from "@/lib/mockData";
 import { useNavigate } from "react-router-dom";
+import Helper from "@/Utils/Helper";
+import apiService from "@/Utils/ApiService";
+import { useQueryClient } from "@tanstack/react-query";
+
+
 
 const STATUS_BADGE = { paid: "hz-badge--paid", pending: "hz-badge--pending", failed: "hz-badge--failed" };
 
@@ -41,10 +48,12 @@ function Section({ title, icon: Icon, children, accent = "cta" }) {
 
 export default function BookingDetailsModal({ open, onClose, details, onSaved }) {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [closeOpen, setCloseOpen] = useState(false);
+  const [isShowBtnLoader, setIsShowBtnLoader] = useState(false);
   const [viewDoc, setViewDoc] = useState(null);
   const [refreshKey, setRefreshKey] = useState(0); // eslint-disable-line no-unused-vars
-
+  const loggedInUser = Helper.getLoginUserDetails();
   if (!open || !details) return null;
   const t = details;
   console.log("BookingDetailsModal render", t );
@@ -60,6 +69,36 @@ export default function BookingDetailsModal({ open, onClose, details, onSaved })
   const remaining = booking ? Math.max(0, booking.totalAmount - paid) : 0;
 
   const isClosed = booking?.status === "closed";
+  const isConfirmedBooking = t?.bookingStatus === "Confirmed" ? true : false;
+
+  const handleBookingStatusUpdate =async (newStatus) => {
+    if (!t) return;
+    try {
+      setIsShowBtnLoader(true);
+      const payload = {
+        key: t.bookingId,
+        bookingStatus: newStatus,
+        userId: loggedInUser?.id ?? 0,
+      }
+      const {status,message} = await apiService.post("admin/updateBookingStatus", payload);
+      if(status === 1){
+        toast.success(message || "Booking status updated successfully");
+         // Refetch booking list
+         onClose();
+        queryClient.invalidateQueries({
+          queryKey: ["bookingList"],
+        });
+      } else {
+        toast.error("Sign-in failed", { description: message || "Failed to update booking status" });
+      }
+    } catch (error) {
+      console.error("Failed to update booking status:", error);
+      toast.error("Sign-in failed", { description: message || "Failed to update booking status. Please try again." });
+    }
+    finally {
+      setIsShowBtnLoader(false);
+    }
+  }
 
   return (
     <HzModal
@@ -72,35 +111,87 @@ export default function BookingDetailsModal({ open, onClose, details, onSaved })
       icon={<User className="size-5" strokeWidth={1.5} />}
       testid="details-profile-modal"
       footer={
-        <>
-          <button className="hz-btn-ghost" onClick={onClose} data-testid="details-profile-close-btn">Close</button>
+      <>
+        <button
+          className="hz-btn-ghost"
+          onClick={onClose}
+          data-testid="details-profile-close-btn"
+        >
+          Close
+        </button>
+
+        {/* <button
+          className="hz-btn-ghost"
+          onClick={() => navigate(`/invoice/${t.bookingId}`)}
+          data-testid="details-profile-print"
+        >
+          <Printer className="size-4" />
+          Print statement
+        </button> */}
+
+        {/* Booking Status Dropdown */}
+        {!isClosed && (
+          <div className="relative">
+            <select
+              className="appearance-none h-10 px-4 pr-10 rounded-lg border border-[var(--hz-border)] bg-white text-sm font-medium outline-none focus:ring-2 focus:ring-[var(--hz-primary)]"
+              defaultValue={t?.bookingStatus || ""}
+              onChange={(e) => handleBookingStatusUpdate(e.target.value)}
+              disabled={isShowBtnLoader}
+              data-testid="details-profile-status-update"
+            >
+              <option value="" disabled>
+                Update Status
+              </option>
+              <option value="Pending">Pending</option>
+              <option value="Confirmed">Confirmed</option>
+              <option value="Cancelled">Cancelled</option>
+              <option value="Completed">Completed</option>
+            </select>
+            <div className="absolute right-8 top-1/2 -translate-y-1/2 flex items-center justify-center pointer-events-none">
+              {isShowBtnLoader ? (
+                <div className="size-4 border-2 border-[var(--hz-primary)] border-t-transparent rounded-full animate-spin"></div>
+              ) : (
+                <svg
+                  className="w-4 h-4 text-gray-400"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M19 9l-7 7-7-7"
+                  />
+                </svg>
+              )}
+            </div>
+          </div>
+        )}
+
+        {!isClosed && isConfirmedBooking && (
           <button
-            className="hz-btn-ghost"
-            onClick={() => navigate(`/invoice/${t.bookingId}`)}
-            data-testid="details-profile-print"
+            className="text-white h-10 px-5 rounded-lg font-medium text-sm transition-colors bg-[#C04235] hover:bg-[#A03228] inline-flex items-center gap-2"
+            onClick={() => setCloseOpen(true)}
+            data-testid="details-profile-close-booking"
           >
-            <Printer className="size-4" /> Print statement
+            <XCircle className="size-4" />
+            Close booking
           </button>
-          {!isClosed && (
-            <button
-              className="text-white h-10 px-5 rounded-lg font-medium text-sm transition-colors bg-[#C04235] hover:bg-[#A03228] inline-flex items-center gap-2"
-              onClick={() => setCloseOpen(true)}
-              data-testid="details-profile-close-booking"
-            >
-              <XCircle className="size-4" /> Close booking
-            </button>
-          )}
-          {isClosed && booking?.closureNumber && (
-            <button
-              className="hz-btn-primary"
-              onClick={() => navigate(`/closure-slip/${booking.id}`)}
-              data-testid="details-profile-closure-slip"
-            >
-              <Printer className="size-4" /> Print closure slip
-            </button>
-          )}
-        </>
-      }
+        )}
+
+        {isClosed && booking?.closureNumber && (
+          <button
+            className="hz-btn-primary"
+            onClick={() => navigate(`/closure-slip/${booking.id}`)}
+            data-testid="details-profile-closure-slip"
+          >
+            <Printer className="size-4" />
+            Print closure slip
+          </button>
+        )}
+      </>
+    }
     >
       <div className="space-y-5">
         {/* Header summary */}
@@ -236,38 +327,44 @@ export default function BookingDetailsModal({ open, onClose, details, onSaved })
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-5 gap-y-4">
             <Field label="Mobile" value={t.mobileNumber} />
             <Field label="WhatsApp" value={t.whatsAppNumber} />
-            <Field label="Email" value={t.emailId} />
-            <Field label="Address" value={t.address} />
+            <Field label="Email" value={t.emailId ?? '-'} />
+            <Field label="Address" value={`${t.address} ${t.cityName} ${t.stateName} `} />
+          </div>
+        </Section>
+        {/* Gurdian Details */}
+        <Section title="Guardian" icon={Shield} accent="info">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-5 gap-y-4">
+            <Field label="Name" value={t.guardianName ?? '-'} />
+            <Field label="Relation" value={t.guardianRelation ?? '-'} />
           </div>
         </Section>
 
         {/* Identification */}
-        <Section title="Identification & passport" icon={FileText} accent="cta">
+        <Section title="Passport" icon={FileText} accent="cta">
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-5 gap-y-4">
-            <Field label="Passport no." value={t.passportNumber} />
-            <Field label="Issued" value={t.passportIssueDate} />
-            <Field label="Expires" value={t.passportExpiryDate} />
-            <Field label="Issue place" value={t.passportIssuePlace} />
-            <Field label="Aadhaar" value={t.aadhaarNumber} />
-            <Field label="PAN" value={t.panNumber} />
+            <Field label="Passport Number" value={t.passportNumber ? t.passportNumber : '-'} />
+            <Field label="Issue Date" value={t.passportIssueDate ?? '-'} />
+            <Field label="Expiry Date" value={t.passportExpiryDate ?? '-'} />
+            <Field label="Issue place" value={t.passportIssuePlace ?? '-'} />
           </div>
         </Section>
+        
 
         {/* Emergency */}
         <Section title="Emergency contact" icon={ShieldAlert} accent="warning">
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-x-5 gap-y-4">
-            <Field label="Name" value={t.emergencyContactName} />
-            <Field label="Number" value={t.emergencyContactNumber} />
-            <Field label="Relation" value={t.emergencyRelation} />
+            <Field label="Contact Name" value={t.emergencyContactName ?? '-'} />
+            <Field label="Number" value={t.emergencyContactNumber ?? '-'} />
+            <Field label="Relation" value={t.emergencyRelation ?? '-'} />
           </div>
         </Section>
 
         {/* Nominee */}
         <Section title="Nominee details" icon={Heart} accent="cta">
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-x-5 gap-y-4">
-            <Field label="Name" value={t.nomineeName} />
-            <Field label="Date of birth" value={t.nomineeDateOfBirth} />
-            <Field label="Relation" value={t.nomineeRelation} />
+            <Field label="Name" value={t.nomineeName ?? '-'} />
+            <Field label="Date of birth" value={t.nomineeDateOfBirth ?? '-'} />
+            <Field label="Relation" value={t.nomineeRelation ?? '-'} />
           </div>
         </Section>
 
@@ -309,8 +406,8 @@ export default function BookingDetailsModal({ open, onClose, details, onSaved })
                     <FileText className="size-4" strokeWidth={1.5} />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <div className="text-sm truncate font-medium">{d.name}</div>
-                    <div className="text-[10px] tracking-[0.18em] uppercase text-[var(--hz-text-2)]">{d.type}</div>
+                    <div className="text-sm truncate font-medium">{d.fileName}</div>
+                    <div className="text-[10px] tracking-[0.18em] uppercase text-[var(--hz-text-2)]">{d.documentType}</div>
                   </div>
                   <button
                     className="hz-btn-ghost !h-8 !px-3 text-xs"
@@ -384,18 +481,19 @@ export default function BookingDetailsModal({ open, onClose, details, onSaved })
           </Section>
         )}
       </div>
-
-      <BookingClosureModal
-        open={closeOpen}
-        onClose={() => setCloseOpen(false)}
-        booking={booking}
-        packageData={pkg}
-        transactions={transactions}
-        onClosed={() => {
-          setRefreshKey((k) => k + 1);
-          onSaved?.();
-        }}
-      />
+      {t.bookingStatus === "Confirmed" && (
+        <BookingClosureModal
+          open={closeOpen}
+          onClose={() => setCloseOpen(false)}
+          booking={booking}
+          packageData={pkg}
+          transactions={transactions}
+          onClosed={() => {
+            setRefreshKey((k) => k + 1);
+            onSaved?.();
+          }}
+        />
+      )}
       <DocumentViewerModal doc={viewDoc} onClose={() => setViewDoc(null)} travellerName={fullName} />
     </HzModal>
   );

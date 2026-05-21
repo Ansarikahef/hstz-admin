@@ -3,7 +3,7 @@ import { Download, FileText, ExternalLink } from "lucide-react";
 
 export default function DocumentViewerModal({ doc, onClose, travellerName }) {
   if (!doc) return null;
-  const url = doc.url || doc.dataUrl || "";
+  const url = doc.url || doc.dataUrl || doc.filePath || "";
   const isPdf =
     url.startsWith("data:application/pdf") || url.toLowerCase().endsWith(".pdf");
   const isImage =

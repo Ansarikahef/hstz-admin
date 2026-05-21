@@ -25,6 +25,7 @@ import PackageDetailV2 from "./pages/packages/PackageDetailV2";
 import TravellersOld from "./pages/TravellersOld";
 import WinnersOld from "./pages/WinnersOld";
 import Bookings from "./pages/Bookings";
+import NavigationHandler from "./NavigationHandler";
 
 function ProtectedRoute({ children }) {
   const { isAuthed } = useAuth();
@@ -49,6 +50,7 @@ function App() {
   return (
     <div className="hz-app-shell">
       <BrowserRouter>
+      <NavigationHandler />
         <Routes>
           <Route path="/login" element={<PublicOnly><Login /></PublicOnly>} />
           <Route path="/invoice/:bookingId" element={<ProtectedRoute><PrintInvoice /></ProtectedRoute>} />

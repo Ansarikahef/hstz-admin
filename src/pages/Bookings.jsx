@@ -35,7 +35,16 @@ import BookingDetailsModal from "@/components/modals/BookingDetailsModal";
 export default function Bookings() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-
+  const today = new Date();
+  // First day of current month
+  const firstDayOfMonth = new Date(
+    today.getFullYear(),
+    today.getMonth(),
+    1
+  );
+  const formatDate = (date) => {
+    return date.toISOString().split("T")[0];
+  };
   const [searchKey, setSearchKey] = useState("");
   const [isShowBtnLoader, setIsShowBtnLoader] = useState(false);
   const [bookingOpen, setBookingOpen] = useState(null);
@@ -46,16 +55,14 @@ export default function Bookings() {
   const [open, setOpen] = useState(false);
   const [confirm, setConfirm] = useState({ open: false, id: null });
   const [updateUserStatus, setUpdateUserStatus] = useState({ open: false, id: null });
-  const [dateFilter, setDateFilter] = useState("all");
-  const [fromDate, setFromDate] = useState("");
-  const [toDate, setToDate] = useState("");
+  const [dateFilter, setDateFilter] = useState("thisMonth");
+  const [fromDate, setFromDate] = useState(formatDate(firstDayOfMonth));
+  const [toDate, setToDate] = useState(formatDate(today));
   const [bookingStatus, setBookingStatus] = useState("all");
   const loggedInUser = Helper.getLoginUserDetails();
 
   const handleDateFilter = (value) => {
     setDateFilter(value);
-  
-    const today = new Date();
   
     // Current Month
     if (value === "thisMonth") {
@@ -272,11 +279,10 @@ export default function Bookings() {
               <button
                 key={s}
                 onClick={() => {
-                  setFilter(s);
-                  setPage(1);
+                  setBookingStatus(s);
                 }}
                 className={`px-3.5 h-9 rounded-full text-xs transition ${
-                  filter === s
+                  bookingStatus === s
                     ? "bg-[var(--hz-sidebar)] text-white"
                     : "bg-[var(--hz-hover)] text-[var(--hz-text-2)] hover:bg-gray-200"
                 }`}
