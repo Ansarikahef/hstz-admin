@@ -115,7 +115,6 @@ export default function PackageList() {
     cacheTime: 10 * 60 * 1000,
     refetchOnWindowFocus: false
   });
-  console.log("Fetched packages:", packages);
   const packageList = useMemo(() => {
     return packages.map((item) => ({
       ...item,
@@ -142,8 +141,6 @@ export default function PackageList() {
         : [],
     }));
   }, [packages]);
-  
-  console.log("Parsed Packages:", packageList);
   return (
     <div data-testid="package-list-page">
       <HzPageHeader

@@ -62,7 +62,6 @@ export default function UserList() {
         userId: loggedInUser?.id || 0,
       }
       const { status, message } = await apiService.post("admin/DeleteUser", payload);
-      console.log("Delete user response:", { status, message });
       if(status === 1){
         setConfirm({ open: false, id: null });
         toast.success(message || "User removed");
@@ -82,7 +81,6 @@ export default function UserList() {
     }
   };
   const handleUpdateUserStatus = async (data) => {
-    console.log("Status update data:", data);
     try{
       setIsShowBtnLoader(true);
       const payload = {
@@ -93,7 +91,6 @@ export default function UserList() {
         remark: data.remark?.trim() || (data.status === "Active" ? "User account has been successfully activated and restored." : data.status === "Inactive" ? "User account has been marked as inactive temporarily." : "User account has been suspended due to administrative action."),
       }
       const { status, message } = await apiService.post("admin/UpdateUserStatus", payload);
-      console.log("Update user status response:", { status, message });
       if(status === 1){
         setUpdateUserStatus({ open: false, id: null });
         toast.success(message || "User status updated");

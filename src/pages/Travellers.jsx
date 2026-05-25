@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Plus, Trash2, FileText, Download, User, FileUp, Eye, Trophy, Search, Filter,
   LayoutGrid, Table as TableIcon, Printer, Calendar, X, BadgeCheck,
@@ -11,6 +11,11 @@ import WinnerMarkModal from "@/components/modals/WinnerMarkModal";
 import HzInput from "@/components/shared/HzInput";
 import { db, formatDate } from "@/lib/mockData";
 import { toast } from "sonner";
+import Loader from "@/components/Loader/Loader";
+import { useQuery } from "@tanstack/react-query";
+import apiService from "@/Utils/ApiService";
+import Helper from "@/Utils/Helper";
+import TravellerProfileModalV2 from "@/components/modals/TravellerProfileModalV2";
 
 const DOC_TYPES = ["passport", "visa", "id-card", "aadhaar", "pan", "insurance", "ticket", "other"];
 const MONTH_FULL = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
@@ -28,16 +33,16 @@ export default function Travellers() {
   const [viewDoc, setViewDoc] = useState(null);
   const [profileOpen, setProfileOpen] = useState(null);
   const [winnerOpen, setWinnerOpen] = useState(null);
-
+  const loggedInUser = Helper.getLoginUserDetails();
   // Filters & view
-  const [view, setView] = useState("cards"); // cards | table
+  const [view, setView] = useState("table"); // cards | table
   const [q, setQ] = useState("");
   const [gender, setGender] = useState("all");
   const [packageId, setPackageId] = useState("all");
   const [winnersOnly, setWinnersOnly] = useState(false);
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
-
+  const [debouncedQ, setDebouncedQ] = useState("");
   const allTravellers = useMemo(
     () =>
       state.bookings.flatMap((b) =>
@@ -114,7 +119,93 @@ export default function Travellers() {
     setView("table");
     setTimeout(() => window.print(), 80);
   };
-
+  const getTravellerList = async (payload) => {
+    try {
+      const queryParams = new URLSearchParams({
+        userId: loggedInUser?.id || 0,
+        searchText: payload?.searchText || "",
+        gender: payload?.gender || "",
+        packageId: payload?.packageId || "",
+        isLuckyDrawWinner: payload?.isLuckyDrawWinner ? true : false,
+        fromDate: payload?.fromDate || "",
+        toDate: payload?.toDate || "",
+      });
+  
+      const url = `admin/GetTravellerList?${queryParams.toString()}`;  
+      const response = await apiService.get(url);  
+      const { status, message, responseValue } = response;  
+      if (status === 1) {
+        return (responseValue || []).map((item) => ({
+          ...item,
+          documents:
+            typeof item.documentDetailsJson === "string"
+              ? JSON.parse(item.documentDetailsJson)
+              : [],
+  
+          // packageImages:
+          //   typeof item.packageImages === "string"
+          //     ? JSON.parse(item.packageImages)
+          //     : [],
+        }));
+      }
+  
+      throw new Error(message || "Failed to fetch traveller list");
+    } catch (error) {
+      console.error("Traveller API Error:", error);
+      throw error;
+    }
+  };
+  const {
+    data: travellerList = [],
+    isLoading,
+    error,
+  } = useQuery({
+    queryKey: [
+      "travellerList",
+      debouncedQ,
+      gender,
+      packageId,
+      winnersOnly,
+      from,
+      to,
+      loggedInUser?.id,
+    ],
+  
+    queryFn: async () => {
+      return await getTravellerList({
+        searchText: debouncedQ || "",
+        gender: gender === "all" ? null : gender,
+        packageId: packageId === "all" ? null : packageId,
+        isLuckyDrawWinner: winnersOnly,
+        fromDate: from || null,
+        toDate: to || null,
+      });
+    },
+  
+    enabled: !!loggedInUser?.id,
+  
+    // CACHE
+    staleTime: 5 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
+  
+    // DO NOT REFETCH
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+    refetchOnMount: false,
+  
+    // KEEP PREVIOUS DATA
+    placeholderData: (previousData) => previousData,
+  
+    retry: 1,
+  });
+   useEffect(() => {
+      const t = setTimeout(() => {
+        setDebouncedQ(q);
+        
+      }, 500);
+    
+      return () => clearTimeout(t);
+    }, [q]);
   const filtersActive = q || gender !== "all" || packageId !== "all" || winnersOnly || from || to;
 
   return (
@@ -127,13 +218,13 @@ export default function Travellers() {
           actions={
             <>
               <div className="hidden sm:flex items-center gap-1 p-1 rounded-lg bg-[var(--hz-hover)]" data-testid="travellers-view-toggle">
-                <button
+                {/* <button
                   onClick={() => setView("cards")}
                   className={`h-8 px-3 rounded-md text-xs font-medium inline-flex items-center gap-1.5 transition ${view === "cards" ? "bg-white text-[var(--hz-text)] shadow-sm" : "text-[var(--hz-text-2)]"}`}
                   data-testid="travellers-view-cards"
                 >
                   <LayoutGrid className="size-3.5" /> Cards
-                </button>
+                </button> */}
                 <button
                   onClick={() => setView("table")}
                   className={`h-8 px-3 rounded-md text-xs font-medium inline-flex items-center gap-1.5 transition ${view === "table" ? "bg-white text-[var(--hz-text)] shadow-sm" : "text-[var(--hz-text-2)]"}`}
@@ -169,12 +260,12 @@ export default function Travellers() {
                 <option value="Non-binary">Non-binary</option>
               </select>
             </div>
-            <div className="md:col-span-3">
+            {/* <div className="md:col-span-3">
               <select className="hz-input !pl-4" value={packageId} onChange={(e) => setPackageId(e.target.value)} data-testid="travellers-filter-package">
                 <option value="all">All packages</option>
                 {state.packages.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
               </select>
-            </div>
+            </div> */}
             <div className="md:col-span-3">
               <button
                 onClick={() => setWinnersOnly((v) => !v)}
@@ -184,15 +275,15 @@ export default function Travellers() {
                 <Trophy className="size-4" strokeWidth={1.75} /> {winnersOnly ? "Showing winners only" : "Show winners only"}
               </button>
             </div>
-            <div className="md:col-span-3">
+            {/* <div className="md:col-span-3">
               <HzInput icon={Calendar} type="date" value={from} onChange={(e) => setFrom(e.target.value)} testid="travellers-filter-from" />
             </div>
             <div className="md:col-span-3">
               <HzInput icon={Calendar} type="date" value={to} onChange={(e) => setTo(e.target.value)} testid="travellers-filter-to" />
-            </div>
+            </div> */}
             <div className="md:col-span-6 flex items-center justify-between gap-3">
               <div className="text-xs text-[var(--hz-text-2)] inline-flex items-center gap-1.5">
-                <Filter className="size-3.5" /> {0} of {0} traveller
+                <Filter className="size-3.5" /> {travellerList.length} traveller 
               </div>
               {filtersActive && (
                 <button onClick={clearFilters} className="text-xs text-[var(--hz-cta)] inline-flex items-center gap-1 hover:underline" data-testid="travellers-filter-clear">
@@ -321,78 +412,186 @@ export default function Travellers() {
 
       {/* TABLE VIEW */}
       {view === "table" && (
-        <div className="hz-card overflow-hidden hz-print-area">
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm" data-testid="travellers-table">
-              <thead className="bg-[var(--hz-hover)] border-b border-[var(--hz-border)]">
-                <tr className="text-left">
-                  <th className="px-4 py-3 hz-label !text-[10px]">Traveller</th>
-                  <th className="px-4 py-3 hz-label !text-[10px]">Gender · DOB</th>
-                  <th className="px-4 py-3 hz-label !text-[10px]">Contact</th>
-                  <th className="px-4 py-3 hz-label !text-[10px]">Passport</th>
-                  <th className="px-4 py-3 hz-label !text-[10px]">Booking</th>
-                  <th className="px-4 py-3 hz-label !text-[10px]">Package</th>
-                  <th className="px-4 py-3 hz-label !text-[10px]">Booked on</th>
-                  <th className="px-4 py-3 hz-label !text-[10px]">Winner</th>
-                  <th className="px-4 py-3 hz-label !text-[10px] text-right hz-no-print">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {(1==2) && filtered.map((t) => {
-                  const pkg = state.packages.find((p) => p.id === t.packageId);
-                  const fullName = t.firstName && t.lastName ? `${t.firstName} ${t.lastName}` : t.name;
-                  return (
-                    <tr key={`${t.bookingId}-${t.id}`} className="hz-stripes-row border-t border-[var(--hz-border-soft)] hover:bg-[var(--hz-hover)]/60" data-testid={`traveller-row-${t.id}`}>
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-2">
-                          <div className="size-7 rounded-full bg-[var(--hz-hover)] flex items-center justify-center text-[var(--hz-text-2)]">
-                            <User className="size-3.5" strokeWidth={1.5} />
+        <div className="hz-card overflow-hidden">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead className="bg-[var(--hz-hover)] border-b">
+                      <tr>
+                        <th className="py-3 text-start tbl-serial-no">S No.</th>
+                        <th className="px-6 py-3 txtNoWrap">Traveller</th>
+                        <th className="px-6 py-3 txtNoWrap">DOB · Gender</th>
+                        <th className="px-6 py-3 txtNoWrap">Mobile No.</th>
+                        <th className="px-6 py-3 txtNoWrap">WhatsApp No.</th>
+                        <th className="px-6 py-3 txtNoWrap">Email Address</th>
+                        <th className="px-6 py-3">Passport</th>
+                        <th className="px-6 py-3 txtNoWrap">Booking No.</th>
+                        <th className="px-6 py-3 txtNoWrap">Package</th>
+                        <th className="px-6 py-3 txtNoWrap">Booking Date</th>
+                        <th className="px-6 py-3 txtNoWrap">Package Type</th>
+                        <th className="px-6 py-3 txtNoWrap">Status</th>
+                        <th className="px-6 py-3 text-right"> Amount</th>
+                        <th className="px-5 py-3 text-right">Actions</th>
+                      </tr>
+                    </thead>
+        
+                    <tbody>
+                      {Array.isArray(travellerList) && travellerList.length > 0 ? (
+                        travellerList.map((b,ind) => {
+                        const statusColors = {
+                          Pending:
+                            "bg-yellow-100 text-yellow-700 border-yellow-200",
+                          Confirmed:
+                            "bg-green-100 text-green-700 border-green-200",
+                          Cancelled:
+                            "bg-red-100 text-red-700 border-red-200",
+                          Completed:
+                            "bg-blue-100 text-blue-700 border-blue-200",
+                        };
+                        const packageColors = {
+                          Domestic:
+                            "bg-purple-100 text-purple-700 border-purple-200",
+                          International:
+                            "bg-indigo-100 text-indigo-700 border-indigo-200",
+                          Premium:
+                            "bg-pink-100 text-pink-700 border-pink-200",
+                        };
+        
+                        return (
+                          <tr
+                            key={b.bookingId}
+                            className={`border-t border-[var(--hz-border-soft)] hover:bg-[var(--hz-hover)] transition`}>
+                            {/* Booking */}
+                            <td className="px-5 py-3">{ind + 1}</td>
+                            {/* <td className="px-6 py-4">
+                              <div className="hz-mono text-[12px] font-semibold">
+                                {b.bookingNo}
+                              </div>
+                            </td> */}
+                            {/* Traveller */}
+                            <td className="px-6 py-4 txtNoWrap">
+                              <div className="flex items-center gap-3">
+                                <div className="size-8 rounded-full bg-primary text-white flex items-center justify-center text-xs font-semibold uppercase shadow-sm">
+                                  {`${b?.firstName?.[0] || ""}${
+                                    b?.lastName?.[0] || ""
+                                  }`}
+                                </div>
+        
+                                <div>
+                                  <div className="font-medium text-[13px]">
+                                    {b?.firstName} {b?.lastName}
+                                  </div>
+        
+                                  {/* <div className="text-[11px] text-[var(--hz-text-3)]">
+                                    {b?.mobileNumber}
+                                  </div> */}
+                                </div>
+                              </div>
+                            </td>
+                            <td className="px-6 py-4 txtNoWrap">
+                              <div className="hz-mono text-[var(--hz-text-2)] font-medium">
+                              {b.dateOfBirth ?? ''} - {b.gender ?? ''}
+                              </div>
+                            </td> 
+                            <td className="px-6 py-4">
+                              <div className="hz-mono text-[var(--hz-text-2)] font-medium">
+                                {b.mobileNumber ?? ''}
+                              </div>
+                            </td> 
+                            <td className="px-6 py-4">
+                              <div className="hz-mono text-[var(--hz-text-2)] font-medium">
+                                {b.whatsAppNumber}
+                              </div>
+                            </td> 
+                            <td className="px-6 py-4">
+                              <div className="hz-mono text-[var(--hz-text-2)] font-medium">
+                                {b.emailId ?? ''}
+                              </div>
+                            </td> 
+                            <td className="px-6 py-4">
+                              <div className="hz-mono text-[var(--hz-text-2)] font-medium">
+                                {b.passportNumber ?? ''}
+                              </div>
+                            </td> 
+                            
+                            <td className="px-6 py-4">
+                              <span className={`inline-flex items-center rounded-full border px-3 py-1 text-[11px] font-medium bg-gray-100 text-gray-700 border-gray-200`}>
+                                {b?.bookingNo}
+                              </span>
+                            </td>
+                            {/* Package */}
+                            <td className="px-6 py-4 text-[var(--hz-text-2)] font-medium txtNoWrap">
+                              {b?.packageName}
+                            </td>
+        
+                            {/* Date */}
+                            <td className="px-6 py-4 text-[var(--hz-text-2)] whitespace-nowrap">
+                              {b?.bookingDate}
+                            </td>
+        
+                            {/* Package Type Badge */}
+                            <td className="px-6 py-4">
+                              <span
+                                className={`inline-flex items-center rounded-full border px-3 py-1 text-[11px] font-medium ${
+                                  packageColors[b?.packageType] ||
+                                  "bg-gray-100 text-gray-700 border-gray-200"
+                                }`}
+                              >
+                                {b?.packageType}
+                              </span>
+                            </td>
+        
+                            {/* Status Badge */}
+                            <td className="px-6 py-4">
+                              <span
+                                className={`inline-flex items-center rounded-full border px-3 py-1 text-[11px] font-semibold ${
+                                  statusColors[b?.bookingStatus] ||
+                                  "bg-gray-100 text-gray-700 border-gray-200"
+                                }`}
+                              >
+                                {b?.bookingStatus}
+                              </span>
+                            </td>
+        
+                            {/* Amount */}
+                            <td className="px-6 py-4 hz-mono text-right font-semibold whitespace-nowrap">
+                              {b?.totalAmount}
+                            </td>
+                            <td className="px-4 py-3 hz-no-print">
+                              <div className="flex justify-end gap-1">
+                                <button onClick={() => setProfileOpen(b)} className="hz-btn-ghost !h-8 !w-8 !p-0 justify-center" title="View Booking Details" data-testid={`traveller-row-view-booking${b.bookingId}`}>
+                                  <Eye className="size-3.5" />
+                                </button>
+                                {/* <button onClick={() => setWinnerOpen(t)} className="hz-btn-ghost !h-8 !w-8 !p-0 justify-center text-[var(--hz-cta)]" title="Mark winner" data-testid={`traveller-row-winner-${t.id}`}>
+                                  <Trophy className="size-3.5" />
+                                </button> */}
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })
+                      ): (
+                      <tr>
+                        <td colSpan={14} className="py-16 text-center">
+                          <div className="flex flex-col items-center justify-center">
+                            <div className="size-16 rounded-full bg-gray-100 flex items-center justify-center text-2xl">
+                              📦
+                            </div>
+        
+                            <h3 className="mt-4 text-sm font-semibold text-gray-700">
+                              No Travellers Found
+                            </h3>
+
+                            <p className="mt-1 text-xs text-gray-500">
+                              No traveller records are available right now.
+                            </p>
                           </div>
-                          <div>
-                            <div className="font-medium">{fullName}</div>
-                            <div className="text-[11px] text-[var(--hz-text-2)] hz-mono">{t.id}</div>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-4 py-3 text-[var(--hz-text-2)]">{t.gender || "—"}{t.dateOfBirth ? ` · ${t.dateOfBirth}` : ""}</td>
-                      <td className="px-4 py-3">
-                        <div className="text-[12px]">{t.mobileNumber || "—"}</div>
-                        <div className="text-[11px] text-[var(--hz-text-2)] truncate max-w-[180px]">{t.emailId || ""}</div>
-                      </td>
-                      <td className="px-4 py-3 hz-mono text-[12px]">{t.passportNumber || "—"}</td>
-                      <td className="px-4 py-3 hz-mono text-[12px]">{t.bookingId}</td>
-                      <td className="px-4 py-3">{pkg?.name || "—"}</td>
-                      <td className="px-4 py-3 text-[var(--hz-text-2)]">{formatDate(t.bookingDate)}</td>
-                      <td className="px-4 py-3">
-                        {t.winnerInfo ? (
-                          <span className="hz-badge hz-badge--paid inline-flex items-center gap-1.5">
-                            <Trophy className="size-3" strokeWidth={2} />
-                            {fmtMonth(t.winnerInfo.month)}
-                          </span>
-                        ) : (
-                          <span className="text-[var(--hz-text-2)] text-xs">—</span>
-                        )}
-                      </td>
-                      <td className="px-4 py-3 hz-no-print">
-                        <div className="flex justify-end gap-1">
-                          <button onClick={() => setProfileOpen(t)} className="hz-btn-ghost !h-8 !w-8 !p-0 justify-center" title="View" data-testid={`traveller-row-view-${t.id}`}>
-                            <Eye className="size-3.5" />
-                          </button>
-                          <button onClick={() => setWinnerOpen(t)} className="hz-btn-ghost !h-8 !w-8 !p-0 justify-center text-[var(--hz-cta)]" title="Mark winner" data-testid={`traveller-row-winner-${t.id}`}>
-                            <Trophy className="size-3.5" />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-                {0 === 0 && (
-                  <tr><td colSpan={9} className="px-4 py-12 text-center text-sm text-[var(--hz-text-2)]">No travellers match these filters.</td></tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
+                        </td>
+                      </tr>
+                    )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
       )}
 
       <HzModal
@@ -434,7 +633,7 @@ export default function Travellers() {
         travellerName={viewDoc?._traveller}
       />
 
-      <TravellerProfileModal
+      <TravellerProfileModalV2
         open={!!profileOpen}
         onClose={() => setProfileOpen(null)}
         traveller={profileOpen}
@@ -448,6 +647,7 @@ export default function Travellers() {
         bookingId={winnerOpen?.bookingId}
         onSaved={refresh}
       />
+      <Loader isLoading={isLoading} title="Please wait, fetching Traveller List..." />
     </div>
   );
 }
