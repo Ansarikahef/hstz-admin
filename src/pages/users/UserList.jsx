@@ -423,7 +423,7 @@ export default function UserList() {
         userName=""
         isLoading={isShowBtnLoader}
       />
-      <Loader isLoading={isLoading} />
+      <Loader isLoading={isLoading} title="Please wait, fetching User List..." />
     </div>
   );
 }

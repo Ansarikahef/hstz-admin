@@ -572,7 +572,7 @@ export default function Bookings() {
         onClose={() => setBookingOpen(null)}
         details={bookingOpen}
       />
-      <Loader isLoading={isLoading} />
+      <Loader isLoading={isLoading} title="Please wait, Fetching Booking Details..." />
     </div>
   );
 }

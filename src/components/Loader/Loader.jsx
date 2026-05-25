@@ -1,4 +1,4 @@
-const Loader = ({ isLoading = false}) => {
+const Loader = ({ isLoading = false, title="Loading dashboard",message="Please wait while we prepare your data"}) => {
     if (!isLoading) return null;
   
     return (
@@ -11,8 +11,8 @@ const Loader = ({ isLoading = false}) => {
           </div>
   
           {/* Title */}
-          <h3 className="hz-loader-title">Loading dashboard</h3>
-          <p className="hz-loader-sub">Please wait while we prepare your data</p>
+          <h3 className="hz-loader-title">{title}</h3>
+          <p className="hz-loader-sub">{message}</p>
   
           {/* Progress */}
           <div className="hz-loader-progress">

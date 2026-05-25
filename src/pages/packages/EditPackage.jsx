@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { use, useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import {
   Save, ArrowLeft, Plus, Trash2, ImagePlus, X, IndianRupee, Calendar, GripVertical, MapPin,
@@ -7,10 +7,9 @@ import HzPageHeader from "@/components/shared/HzPageHeader";
 import HzInput from "@/components/shared/HzInput";
 import { db, formatCurrency } from "@/lib/mockData";
 import { toast } from "sonner";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import apiService from "@/Utils/ApiService";
 import Helper from "@/Utils/Helper";
-import { set } from "date-fns";
 
 function MultiPicker({ label, options, selected, onChange, testid }) {
   return (
@@ -42,31 +41,31 @@ function MultiPicker({ label, options, selected, onChange, testid }) {
   );
 }
 
-export default function PackageForm() {
-  const { id } = useParams();
+export default function EditPackage() {
   const navigate = useNavigate();
-  const isEdit = !!id;
+  const queryClient = useQueryClient();
+  const pkg = Helper.retrieveFromSession("editPackageData") ?? null;
+  console.log("PackageDetailV2:", pkg);
   const [state] = useState(() => db.load());
-  const existing = isEdit ? state.packages.find((p) => p.id === id) : null;
+  const [existing, setExisting] = useState(pkg);
   const [isLoading, setIsLoading] = useState(false);
   const loggedInUser = Helper.getLoginUserDetails();
-  const [form, setForm] = useState(() => existing ? { ...existing, durations: [...existing.durations], itinerary: [...existing.itinerary], images: [...(existing.images || [])] } : {
+  const [form, setForm] = useState({
+    packageId:  0,
+    existingImages: [],
+    deletedImages: [],
+    durations: [],
+    itinerary: [],
+    images: [] ,
     name: "",
     description: "",
     categories: [],
-    destinations: [],
-    durations: [{ days: 5, price: 50000, emiPerMonth: 4500 }],
-    itinerary: [{ day: 1, title: "", destination: "", description: "" }],
-    images: [],
-    status: "active",
+    destinations:  [],
+    status: "",
     emiSupported: false,
   });
   const [errors, setErrors] = useState({});
-
-  useEffect(() => {
-    if (isEdit && !existing) navigate("/packages");
-  }, [isEdit, existing, navigate]);
-
+  
   const validate = () => {
     const e = {};
     if (!form.name.trim()) e.name = "Name is required.";
@@ -83,15 +82,18 @@ export default function PackageForm() {
   };
   const clearForm = () => {
     setForm({
+      packageId: 0,
       name: "",
       description: "",
       categories: [],
       destinations: [],
-      durations: [{ days: 5, price: 50000, emiPerMonth: 4500 }],
-      itinerary: [{ day: 1, title: "", destination: "", description: "" }],
+      durations: [],
+      itinerary: [],
       images: [],
       status: "active",
       emiSupported: false,
+      existingImages: [],
+      deletedImages: [],
     });
   };
   const save = async() => {
@@ -99,26 +101,15 @@ export default function PackageForm() {
       toast.error("Please correct the highlighted fields.");
       return;
     }
-    // const s = db.load();
-    // if (isEdit) {
-    //   const idx = s.packages.findIndex((p) => p.id === id);
-    //   s.packages[idx] = { ...s.packages[idx], ...form };
-    // } else {
-    //   s.packages.unshift({ ...form, id: db.newId("pkg"), createdAt: new Date().toISOString() });
-    // }
-    // db.save(s);
-    // toast.success(isEdit ? "Package updated" : "Package created", {
-    //   description: `${form.name} has been ${isEdit ? "saved" : "added"} to your catalog.`,
-    // });
-    // navigate("/packages");
     console.log("Form data to be saved", form);
     setIsLoading(true);
     const formData = new FormData();
 
     // Basic fields
+    formData.append("PackageId", form.packageId);
     formData.append("PackageName", form.name);
     formData.append("Description", form.description);
-    formData.append("Status", form.status === "active" ? 1 : 0);
+    formData.append("Status", form.status === "active" ? 1 : form.status === "inactive" ? 2 : form.status === "closed" ? 3 : 0);
     formData.append("UserId", loggedInUser.id ?? 0);
 
     // Arrays as comma separated string
@@ -126,11 +117,12 @@ export default function PackageForm() {
     formData.append("DestinationIds", form.destinations.join(","));
 
     // JSON fields
-    formData.append("Durations", JSON.stringify(form.durations));
+    formData.append("DurationsJson", JSON.stringify(form.durations));
     formData.append("ItineraryJson", JSON.stringify(form.itinerary));
 
 
     formData.append("IsEmiEnable", form.emiSupported);
+    formData.append("deletedImageIds", form.deletedImages.join(","));
 
     // Multiple images
     form.images.forEach((img) => {
@@ -143,10 +135,14 @@ export default function PackageForm() {
       console.log(pair[0], pair[1]);
     }
     try{
-      const {status,message,responseValue} = await apiService.postMedia('admin/createPackage', formData);
+      const {status,message,responseValue} = await apiService.postMedia('admin/editPackage', formData);
       if(status === 1){
         toast.success(message || "Package saved");
+        queryClient.invalidateQueries({
+          queryKey: ["packages"],
+        });
         clearForm();
+        navigate(`/packages`);
       }
       else{
         toast.error(message || "Failed to save package");
@@ -210,11 +206,31 @@ export default function PackageForm() {
     }));
   };
   
-  const removeImage = (index) => {
-    setForm((prev) => ({
-      ...prev,
-      images: prev.images.filter((_, i) => i !== index),
-    }));
+  // const removeImage = (index) => {
+  //   setForm((prev) => ({
+  //     ...prev,
+  //     images: prev.images.filter((_, i) => i !== index),
+  //   }));
+  // };
+  const removeImage = (img, index, type) => {
+    // OLD IMAGE
+    if (type === "old") {
+      setForm((prev) => ({
+        ...prev,
+  
+        existingImages: prev.existingImages.filter((_, i) => i !== index),
+  
+        deletedImages: [...prev.deletedImages, img.imageId],
+      }));
+    }
+  
+    // NEW IMAGE
+    else {
+      setForm((prev) => ({
+        ...prev,
+        newImages: prev.newImages.filter((_, i) => i !== index),
+      }));
+    }
   };
   const getDestinationList = async () => {
     const { status, message, responseValue } =
@@ -271,11 +287,46 @@ const getCategoryList = async () => {
       name: item.destinationName,
     }));
   }, [destination]);
+ 
+  useEffect(()=>{
+      setForm({ 
+        ...existing, 
+        packageId: existing.packageId ?? 0,
+        durations: [...existing.durationJson],
+        itinerary: [...existing.itineraryJson],
+        images: [] ,
+        existingImages: (existing.images || []).map((img) => ({
+          imageId: img.imageId,
+          imagePath: img.imagePath,
+          preview: img.imagePath,
+          isOld: true,
+        })),
+        name: existing.packageName,
+        description: existing.description,
+        categories: existing.categories.length > 0 ? existing.categories.map(c => c.id) : [],
+        destinations: existing.destinations.length > 0 ? existing.destinations.map(d => d.id) : [],
+        status: existing.statusName,
+        emiSupported: existing.isEMIEnable,
+        deletedImages: [],
+
+        });
+  },[existing])
+  useEffect(() => {
+    console.log("Existing package data", form);
+  }, [form]);
+  if (!existing) {
+    return (
+      <div className="hz-card p-12 text-center">
+        <h2 className="hz-heading text-xl">Package not found</h2>
+        <Link to="/packages" className="hz-btn-primary mt-4 inline-flex">Back to packages</Link>
+      </div>
+    );
+  }
   return (
     <div data-testid="package-form-page">
       <HzPageHeader
-        kicker={isEdit ? "Edit package" : "New package"}
-        title={isEdit ? form.name || "Edit package" : "Compose a new itinerary"}
+        kicker={"Edit package"}
+        title={"Edit package"}
         description="Define the story, destinations, durations and pricing. Build a day-wise plan and upload media."
         actions={
           <>
@@ -285,7 +336,7 @@ const getCategoryList = async () => {
             <button className="hz-btn-primary" onClick={save} data-testid="package-form-save" disabled={isLoading}>
               <Save className="size-4" strokeWidth={1.75} /> {
                 isLoading ? "Saving..." :
-                (isEdit ? "Save changes" : "Create package")
+                ("Save changes")
               }
             </button>
           </>
@@ -433,20 +484,9 @@ const getCategoryList = async () => {
               <div className="text-xs text-[var(--hz-text-2)] mt-0.5">PNG, JPG up to 5MB each</div>
               <input type="file" accept="image/*" multiple className="hidden" onChange={onImagesUpload} data-testid="package-form-upload" />
             </label>
-            {/* {form.images.length > 0 && (
-              <div className="grid grid-cols-3 gap-2 mt-4">
-                {form.images.map((src, i) => (
-                  <div key={i} className="relative aspect-square rounded-lg overflow-hidden group" data-testid={`package-form-image-${i}`}>
-                    <img src={src} alt="" className="w-full h-full object-cover" />
-                    <button onClick={() => removeImage(i)} className="absolute top-1 right-1 size-7 rounded-full bg-black/60 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition" data-testid={`package-form-image-remove-${i}`}>
-                      <X className="size-3.5" />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )} */}
             {form.images.length > 0 && (
               <div className="grid grid-cols-3 gap-2 mt-4">
+
                 {form.images.map((img, i) => (
                   <div
                     key={i}
@@ -460,7 +500,7 @@ const getCategoryList = async () => {
                     />
 
                     <button
-                      onClick={() => removeImage(i)}
+                       onClick={() => removeImage(img, i, "old")}
                       className="absolute top-1 right-1 size-7 rounded-full bg-black/60 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition"
                       data-testid={`package-form-image-remove-${i}`}
                     >
@@ -468,6 +508,27 @@ const getCategoryList = async () => {
                     </button>
                   </div>
                 ))}
+                
+              </div>
+            )}
+            {form.existingImages.length > 0 && (
+              <div className="grid grid-cols-3 gap-2 mt-4">
+
+              {form.existingImages.map((img, i) => (
+                    <div key={`old-${i}`} className="relative aspect-square rounded-lg overflow-hidden group">
+                      <img
+                        src={img.preview}
+                        className="w-full h-full object-cover"
+                      />
+                      <button
+                        onClick={() => removeImage(img, i, "old")}
+                        className="absolute top-1 right-1 size-7 rounded-full bg-black/60 text-white"
+                      >
+                        <X className="size-3.5" />
+                      </button>
+                    </div>
+                  ))}
+                
               </div>
             )}
           </section>

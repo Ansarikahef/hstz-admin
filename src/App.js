@@ -26,6 +26,7 @@ import TravellersOld from "./pages/TravellersOld";
 import WinnersOld from "./pages/WinnersOld";
 import Bookings from "./pages/Bookings";
 import NavigationHandler from "./NavigationHandler";
+import EditPackage from "./pages/packages/EditPackage";
 
 function ProtectedRoute({ children }) {
   const { isAuthed } = useAuth();
@@ -64,6 +65,7 @@ function App() {
             <Route path="/packages/:id" element={<PackageDetail />} />
             <Route path="/packages/:id/edit" element={<PackageForm />} />
             <Route path="/packages-details" element={<PackageDetailV2 />} />
+            <Route path="/edit-package" element={<EditPackage />} />
             <Route path="/categories" element={<CategoryMaster />} />
             <Route path="/destinations" element={<DestinationMaster />} />
             <Route path="/users" element={<UserList />} />

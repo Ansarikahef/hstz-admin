@@ -6,22 +6,25 @@ import { db, formatCurrency } from "@/lib/mockData";
 import ConfirmModal from "@/components/modals/ConfirmModal";
 import { toast } from "sonner";
 import apiService from "@/Utils/ApiService";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import Helper from "@/Utils/Helper";
+import Loader from "@/components/Loader/Loader";
 
 const STATUS_LABEL = { active: "Active", inactive: "Inactive", closed: "Closed" };
 const STATUS_CLASS = { active: "hz-badge--active", inactive: "hz-badge--inactive", closed: "hz-badge--closed" };
 
 export default function PackageList() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [state, setState] = useState(() => db.load());
   const [q, setQ] = useState("");
   const [status, setStatus] = useState("all");
   const [page, setPage] = useState(1);
   const [confirm, setConfirm] = useState({ open: false, id: null });
-
+  const [isShowBtnLoader, setIsShowBtnLoader] = useState(false);
+  const loggedInUser = Helper.getLoginUserDetails();
   const pageSize = 6;
-
+  
   const filtered = useMemo(() => {
     return state.packages.filter((p) => {
       if (status !== "all" && p.status !== status) return false;
@@ -43,13 +46,33 @@ export default function PackageList() {
     toast.success(`Package ${p.status === "active" ? "activated" : "deactivated"}`);
   };
 
-  const removePkg = () => {
-    const s = db.load();
-    s.packages = s.packages.filter((p) => p.id !== confirm.id);
-    db.save(s);
-    setState({ ...s });
+  const removePkg = async () => {
+    setIsShowBtnLoader(true);
+    const key = confirm.id;
     setConfirm({ open: false, id: null });
-    toast.success("Package removed", { description: "It will no longer appear in listings." });
+    try{
+      const payload = {
+        key:key,
+        userId:loggedInUser?.id || 0,
+      }
+      const {status, message} = await apiService.post(`admin/DeletePackage`, payload);
+      if(status !== 1){
+        toast.error(message || "Failed to delete package");
+        return;
+      }
+      toast.success(message || "Package removed", { description: "It will no longer appear in listings." });
+      queryClient.invalidateQueries({
+        queryKey: ["packages"],
+      });
+    }
+    catch(error){
+      toast.error(error.message || "An error occurred while deleting the package");
+    }
+    finally{
+      setIsShowBtnLoader(false);
+    }
+
+    
   };
 
   const exportCsv = () => {
@@ -69,6 +92,10 @@ export default function PackageList() {
     Helper.storeToSession("selectedPackage", pkg);
     navigate(`/packages-details`);
   }
+  const handleEditPackage = (pkg) => {
+    Helper.storeToSession("editPackageData", pkg);
+    navigate(`/edit-package`);
+  }
   const getPackageList = async () => {
       const { status, message, responseValue } =
         await apiService.get("admin/PackageList");
@@ -80,7 +107,7 @@ export default function PackageList() {
       }
   };
   // React Query
-  const { data: packages = [] } = useQuery({
+  const { data: packages = [],isLoading } = useQuery({
     queryKey: ["packages"], 
     queryFn: getPackageList,
     keepPreviousData: true,
@@ -193,9 +220,15 @@ export default function PackageList() {
                   <div className="flex items-center gap-1">
                     {/* <button onClick={() => navigate(`/packages/${p.packageId}`)} className="hz-btn-ghost !h-9 !w-9 !p-0 justify-center" data-testid={`package-view-${p.packageId}`} title="View"><Eye className="size-4" strokeWidth={1.5} /></button> */}
                     <button onClick={() => handleViewPackage(p)} className="hz-btn-ghost !h-9 !w-9 !p-0 justify-center" data-testid={`package-view-${p.packageId}`} title="View"><Eye className="size-4" strokeWidth={1.5} /></button>
-                    <button onClick={() => navigate(`/packages/${p.packageId}/edit`)} className="hz-btn-ghost !h-9 !w-9 !p-0 justify-center" data-testid={`package-edit-${p.packageId}`} title="Edit"><Edit2 className="size-4" strokeWidth={1.5} /></button>
-                    <button onClick={() => toggleStatus(p.packageId)} className="hz-btn-ghost !h-9 !w-9 !p-0 justify-center" data-testid={`package-toggle-${p.packageId}`} title="Toggle status"><Calendar className="size-4" strokeWidth={1.5} /></button>
-                    <button onClick={() => setConfirm({ open: true, id: p.id })} className="hz-btn-ghost !h-9 !w-9 !p-0 justify-center text-[var(--hz-error)]" data-testid={`package-delete-${p.packageId}`} title="Delete"><Trash2 className="size-4" strokeWidth={1.5} /></button>
+                    <button onClick={() => handleEditPackage(p)} className="hz-btn-ghost !h-9 !w-9 !p-0 justify-center" data-testid={`package-edit-${p.packageId}`} title="Edit"><Edit2 className="size-4" strokeWidth={1.5} /></button>
+                    {/* <button onClick={() => toggleStatus(p.packageId)} className="hz-btn-ghost !h-9 !w-9 !p-0 justify-center" data-testid={`package-toggle-${p.packageId}`} title="Toggle status"><Calendar className="size-4" strokeWidth={1.5} /></button> */}
+                    <button onClick={() => setConfirm({ open: true, id: p.packageId })} disabled={isShowBtnLoader} className="hz-btn-ghost !h-9 !w-9 !p-0 justify-center text-[var(--hz-error)]" data-testid={`package-delete-${p.packageId}`} title="Delete">
+                      {isShowBtnLoader ? (
+                          <div className="size-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                        ) : (
+                          <Trash2 className="size-4" strokeWidth={1.5} />
+                      )}
+                    </button>
                   </div>
                 </div>
               </div>
@@ -230,6 +263,7 @@ export default function PackageList() {
         tone="danger"
         testid="package-delete"
       />
+      <Loader isLoading={isLoading} title="Please wait, loading packages..." />
     </div>
   );
 }
