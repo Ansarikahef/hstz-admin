@@ -15,6 +15,7 @@ import {
 const NAV = [
   { to: "/dashboard", icon: LayoutDashboard, label: "Dashboard", testid: "nav-dashboard" },
   { to: "/bookings", icon: LayoutDashboard, label: "Bookings", testid: "nav-bookings" },
+  { to: "/payments", icon: LayoutDashboard, label: "Payments", testid: "nav-payments" },
   { to: "/packages", icon: Package, label: "Packages", testid: "nav-packages" },
   { to: "/categories", icon: Tags, label: "Categories", testid: "nav-categories" },
   { to: "/destinations", icon: MapPinned, label: "Destinations", testid: "nav-destinations" },

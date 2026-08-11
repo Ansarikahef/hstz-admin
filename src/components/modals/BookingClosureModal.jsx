@@ -92,7 +92,7 @@ export default function BookingClosureModal({
     onClosed?.({ remark, discount: Number(discount) || 0, winner: winnerName, closureNumber: cn });
     setStep(2);
   };
-
+  console.log('dsjhdjhj',{ booking, transactions, paid, remaining });
   return (
     <HzModal
       open={open}

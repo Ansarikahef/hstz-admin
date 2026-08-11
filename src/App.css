@@ -4,3 +4,7 @@
     background-color: var(--hz-bg);
     color: var(--hz-text);
 }
+
+.tbl-full-data-width{
+    text-wrap: nowrap;
+}

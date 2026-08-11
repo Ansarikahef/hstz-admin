@@ -46,7 +46,7 @@ export default function Login() {
     try{
       const {status,message,token} = await login({ email: form.email, password: form.password });
       console.log("Login response:", {status, message, token});
-      if(status === 1){
+      if(status && Number(status) === 1){
         toast.success(message || "Login successful. Welcome back!");
         navigate("/dashboard");
       }
@@ -76,7 +76,7 @@ export default function Login() {
             <div className="size-10 rounded-xl flex items-center justify-center" style={{ backgroundColor: "var(--hz-cta)" }}>
               <Compass className="size-5" strokeWidth={1.75} />
             </div>
-            <div className="hz-heading text-xl font-semibold tracking-tight">HZ Travel Zone</div>
+            <div className="hz-heading text-xl font-semibold tracking-tight">HS Travel Zone</div>
           </div>
           <div className="mt-auto max-w-md">
             <div className="text-[11px] tracking-[0.22em] uppercase text-white/70 mb-3">Operator Console</div>
@@ -109,7 +109,7 @@ export default function Login() {
             <div className="size-10 rounded-xl flex items-center justify-center" style={{ backgroundColor: "var(--hz-cta)" }}>
               <Compass className="size-5 text-white" strokeWidth={1.75} />
             </div>
-            <div className="hz-heading text-lg font-semibold">HZ Travel Zone</div>
+            <div className="hz-heading text-lg font-semibold">HS Travel Zone</div>
           </div>
           <div className="hz-label mb-3">Sign in</div>
           <h1 className="hz-heading text-3xl sm:text-4xl font-medium tracking-tight text-[var(--hz-text)] leading-[1.05]">
@@ -124,7 +124,7 @@ export default function Login() {
               label="Email address"
               icon={Mail}
               type="email"
-              placeholder="you@hztravelzone.com"
+              placeholder="you@hstravelzone.com"
               value={form.email}
               onChange={(e) => setForm({ ...form, email: e.target.value })}
               error={errors.email}
@@ -182,7 +182,7 @@ export default function Login() {
             New traveller partner? <Link to="/register" className="text-[var(--hz-cta)] font-medium hover:underline" data-testid="login-to-register">Create an account</Link>
           </div>
           <div className="mt-10 text-[11px] tracking-[0.18em] uppercase text-[var(--hz-text-2)]/70">
-            © {new Date().getFullYear()} HZ Travel Zone · Secure session
+            © {new Date().getFullYear()} HS Travel Zone · Secure session
           </div>
         </div>
       </div>

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import HzModal from "./HzModal";
 import BookingClosureModal from "./BookingClosureModal";
 import DocumentViewerModal from "./DocumentViewerModal";
@@ -49,11 +49,12 @@ function Section({ title, icon: Icon, children, accent = "cta" }) {
 export default function BookingDetailsModal({ open, onClose, details, onSaved }) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const [closeOpen, setCloseOpen] = useState(false);
+  const [closeOpen, setCloseOpen] = useState(true);
   const [isShowBtnLoader, setIsShowBtnLoader] = useState(false);
   const [viewDoc, setViewDoc] = useState(null);
   const [refreshKey, setRefreshKey] = useState(0); // eslint-disable-line no-unused-vars
   const loggedInUser = Helper.getLoginUserDetails();
+  useEffect(()=>{console.log('closeOpen ::',closeOpen)},[closeOpen])
   if (!open || !details) return null;
   const t = details;
   console.log("BookingDetailsModal render", t );
@@ -70,7 +71,7 @@ export default function BookingDetailsModal({ open, onClose, details, onSaved })
 
   const isClosed = booking?.status === "closed";
   const isConfirmedBooking = t?.bookingStatus === "Confirmed" ? true : false;
-
+  console.log('t ::',t)
   const handleBookingStatusUpdate =async (newStatus) => {
     if (!t) return;
     try {
@@ -99,7 +100,7 @@ export default function BookingDetailsModal({ open, onClose, details, onSaved })
       setIsShowBtnLoader(false);
     }
   }
-
+  
   return (
     <HzModal
       open={open}
@@ -481,7 +482,7 @@ export default function BookingDetailsModal({ open, onClose, details, onSaved })
           </Section>
         )}
       </div>
-      {t.bookingStatus === "Confirmed" && (
+      {/* {t.bookingStatus === "Confirmed" && ( */}
         <BookingClosureModal
           open={closeOpen}
           onClose={() => setCloseOpen(false)}
@@ -493,7 +494,7 @@ export default function BookingDetailsModal({ open, onClose, details, onSaved })
             onSaved?.();
           }}
         />
-      )}
+      {/* )} */}
       <DocumentViewerModal doc={viewDoc} onClose={() => setViewDoc(null)} travellerName={fullName} />
     </HzModal>
   );

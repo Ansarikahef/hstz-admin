@@ -1,5 +1,6 @@
 import config  from './envConfig'
 import Helper from './Helper'
+import { navigateTo } from "@/Utils/navigationService";
 
 const apiService = {
   baseUrl: config.API_BASE_URL || '',
@@ -74,6 +75,13 @@ const apiService = {
         body: JSON.stringify(payload),
       })
       if (response.status === 401) {
+        if (
+          endpoint.toLowerCase() === "admin/adminlogin" ||
+          `${this.baseUrl}${endpoint}`.toLowerCase() ===
+            "https://hstzapiservice.docotrip.com/api/admin/adminlogin"
+        ) {
+          return await this.handleResponse(response);
+        }
         localStorage.removeItem("hstzAuthToken");
         localStorage.removeItem("user");
   

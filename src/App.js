@@ -27,6 +27,7 @@ import WinnersOld from "./pages/WinnersOld";
 import Bookings from "./pages/Bookings";
 import NavigationHandler from "./NavigationHandler";
 import EditPackage from "./pages/packages/EditPackage";
+import Payments from "./pages/Payments";
 
 function ProtectedRoute({ children }) {
   const { isAuthed } = useAuth();
@@ -60,6 +61,7 @@ function App() {
           <Route element={<ProtectedRoute><AdminLayout /></ProtectedRoute>}>
             <Route path="/register" element={<Register />} />
             <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/payments" element={<Payments />} />
             <Route path="/packages" element={<PackageList />} />
             <Route path="/packages/new" element={<PackageForm />} />
             <Route path="/packages/:id" element={<PackageDetail />} />
