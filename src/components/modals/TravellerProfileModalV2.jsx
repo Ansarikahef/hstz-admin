@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import HzModal from "./HzModal";
 import BookingClosureModal from "./BookingClosureModal";
 import DocumentViewerModal from "./DocumentViewerModal";
@@ -10,8 +11,22 @@ import {
 import { db, formatCurrency, formatDate, formatDateTime } from "@/lib/mockData";
 import { useNavigate } from "react-router-dom";
 import BookingClosureModalV2 from "./BookingClosureModalV2";
+import apiService from "@/Utils/ApiService";
 
-const STATUS_BADGE = { paid: "hz-badge--paid", pending: "hz-badge--pending", failed: "hz-badge--failed" };
+const STATUS_BADGE = {
+  SUCCESS: "hz-badge--paid",
+  CHARGED: "hz-badge--paid",
+  PAID: "hz-badge--paid",
+
+  PENDING: "hz-badge--pending",
+  NEW: "hz-badge--pending",
+
+  FAILED: "hz-badge--failed",
+  FAILURE: "hz-badge--failed",
+  DECLINED: "hz-badge--failed",
+  CANCELLED: "hz-badge--failed",
+  CANCELED: "hz-badge--failed",
+};
 
 function Field({ label, value }) {
   //if (value === undefined || value === null || value === "") return null;
@@ -40,17 +55,66 @@ function Section({ title, icon: Icon, children, accent = "cta" }) {
     </section>
   );
 }
+const getPaymentTransactionsAdmin = async (travellerId) => {
+  const payload = {
+    customerId: 0,
+    travellerId: travellerId,
+    productId: 0,
+    search: "",
+    status: "",
+    fromDate: null,
+    toDate: null,
+  };
 
+  const { status, message, responseValue } =
+    await apiService.post(
+      "admin/GetPaymentTransactionsAdmin",
+      payload
+    );
+
+  if (status === 1) {
+    return {
+      dashboard: responseValue?.[0] || {},
+      transactions: responseValue?.[1] || [],
+    };
+  }
+
+  throw new Error(
+    message || "Failed to fetch payment transactions"
+  );
+};
 export default function TravellerProfileModalV2({ open, onClose, traveller, onSaved }) {
   const navigate = useNavigate();
   const [closeOpen, setCloseOpen] = useState(false);
   const [viewDoc, setViewDoc] = useState(null);
   const [refreshKey, setRefreshKey] = useState(0); // eslint-disable-line no-unused-vars
-  console.log("TravellerProfileModalV2 render", traveller);
-  if (!open || !traveller) return null;
-  const t = traveller;
 
-  const fullName =t.fullName;
+  const t = traveller;
+  const travellerId = t?.travellerId || null;
+
+  const {
+    data: paymentData,
+    isLoading: paymentLoading,
+    isFetching: paymentFetching,
+    isError: paymentError,
+    error: paymentQueryError,
+    refetch: refetchPayments,
+  } = useQuery({
+    queryKey: ["adminPaymentTransactions", travellerId],  
+    queryFn: () =>
+      getPaymentTransactionsAdmin(travellerId),  
+    enabled: !!travellerId,
+    staleTime: 1000 * 60 * 10,
+    gcTime: 1000 * 60 * 30,
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
+    retry: 1,
+  });
+  if (!open || !traveller) return null;
+  
+  console.log("TravellerProfileModalV2 render", t);
+
+  const fullName =t.fullName; 
 
   // Booking Details
   const booking = {
@@ -69,7 +133,6 @@ export default function TravellerProfileModalV2({ open, onClose, traveller, onSa
     packageId: t.packageId,
     userId: t.userId,
   };
-  console.log("Booking details:", booking);
   // Package Details
   const pkg = {
     id: t.packageId,
@@ -108,20 +171,55 @@ export default function TravellerProfileModalV2({ open, onClose, traveller, onSa
 
   // Documents
   const documents = t.documents || [];
-
-  // Example Usage
-  console.log({
-    fullName,
-    booking,
-    pkg,
-    user,
-    paid,
-    pending,
-    remaining,
-    isClosed,
-    documents,
-  });
-
+  
+  const transactionsList = paymentData?.transactions || [];
+  const paymentSummary = (transactionsList || []).reduce(
+    (acc, transaction) => {
+      const status =
+        transaction.paymentStatus?.toUpperCase() || "UNKNOWN";
+  
+      const amount = Number(transaction.amount || 0);
+  
+      if (
+        status === "SUCCESS" ||
+        status === "CHARGED" ||
+        status === "PAID"
+      ) {
+        acc.paid += amount;
+        acc.paidCount += 1;
+      } else if (
+        status === "PENDING" ||
+        status === "NEW"
+      ) {
+        acc.pending += amount;
+        acc.pendingCount += 1;
+      } else if (
+        status === "FAILED" ||
+        status === "FAILURE" ||
+        status === "DECLINED" ||
+        status === "CANCELLED" ||
+        status === "CANCELED"
+      ) {
+        acc.failed += amount;
+        acc.failedCount += 1;
+      }
+  
+      return acc;
+    },
+    {
+      paid: 0,
+      pending: 0,
+      failed: 0,
+      paidCount: 0,
+      pendingCount: 0,
+      failedCount: 0,
+    }
+  );
+  
+  const totalPaidAmount = paymentSummary.paid;
+  const totalPendingAmount = paymentSummary.pending;
+  const totalFailedAmount = paymentSummary.failed;
+  console.log("TravellerProfileModalV2 transactionsList", transactionsList);
   return (
     <HzModal
       open={open}
@@ -315,51 +413,461 @@ export default function TravellerProfileModalV2({ open, onClose, traveller, onSa
 
         {/* Transaction statement */}
         {booking && (
-          <Section title="Transaction statement" icon={Receipt} accent="success">
-            <div className="overflow-x-auto -mx-1">
-              <table className="w-full text-sm">
-                <thead className="bg-[var(--hz-hover)]">
-                  <tr className="text-left">
-                    <th className="px-3 py-2.5 hz-label !text-[10px]">Date</th>
-                    <th className="px-3 py-2.5 hz-label !text-[10px]">Method</th>
-                    <th className="px-3 py-2.5 hz-label !text-[10px]">Transaction ID</th>
-                    <th className="px-3 py-2.5 hz-label !text-[10px]">Installment</th>
-                    <th className="px-3 py-2.5 hz-label !text-[10px]">Status</th>
-                    <th className="px-3 py-2.5 hz-label !text-[10px] text-right">Amount</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {transactions.map((x) => (
-                    <tr key={x.id} className="hz-stripes-row border-t border-[var(--hz-border-soft)]">
-                      <td className="px-3 py-2.5 hz-mono text-[12px] text-[var(--hz-text-2)]">{formatDateTime(x.date)}</td>
-                      <td className="px-3 py-2.5">{x.method}</td>
-                      <td className="px-3 py-2.5 hz-mono text-[12px]">{x.transactionId}</td>
-                      <td className="px-3 py-2.5 text-[var(--hz-text-2)]">{x.installment}</td>
-                      <td className="px-3 py-2.5"><span className={`hz-badge ${STATUS_BADGE[x.status]}`}>{x.status}</span></td>
-                      <td className="px-3 py-2.5 hz-mono text-right">{formatCurrency(x.amount)}</td>
-                    </tr>
-                  ))}
-                  {transactions.length === 0 && (
-                    <tr><td colSpan={6} className="px-3 py-6 text-center text-sm text-[var(--hz-text-2)]">No transactions on this booking yet.</td></tr>
+          <Section
+  title="Transaction statement"
+  icon={Receipt}
+  accent="success"
+>
+  {/* =====================================================
+      PAYMENT SUMMARY
+  ====================================================== */}
+
+  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-5">
+
+    {/* PAID */}
+    <div
+      className="
+        rounded-xl
+        border border-emerald-200
+        bg-emerald-50/60
+        p-4
+      "
+    >
+      <div className="flex items-center justify-between">
+
+        <div>
+          <div className="text-[10px] font-semibold uppercase tracking-wider text-emerald-600">
+            Total Paid
+          </div>
+
+          <div className="mt-1 text-xl font-bold text-emerald-700">
+            {formatCurrency(totalPaidAmount)}
+          </div>
+
+          <div className="mt-1 text-[10px] text-emerald-600">
+            {paymentSummary.paidCount} successful payment
+            {paymentSummary.paidCount !== 1 ? "s" : ""}
+          </div>
+        </div>
+
+        <div
+          className="
+            size-10
+            rounded-xl
+            bg-emerald-100
+            flex items-center
+            justify-center
+            text-emerald-600
+          "
+        >
+          ✓
+        </div>
+
+      </div>
+    </div>
+
+
+    {/* PENDING */}
+    <div
+      className="
+        rounded-xl
+        border border-amber-200
+        bg-amber-50/60
+        p-4
+      "
+    >
+      <div className="flex items-center justify-between">
+
+        <div>
+          <div className="text-[10px] font-semibold uppercase tracking-wider text-amber-600">
+            Total Pending
+          </div>
+
+          <div className="mt-1 text-xl font-bold text-amber-700">
+            {formatCurrency(totalPendingAmount)}
+          </div>
+
+          <div className="mt-1 text-[10px] text-amber-600">
+            {paymentSummary.pendingCount} pending payment
+            {paymentSummary.pendingCount !== 1 ? "s" : ""}
+          </div>
+        </div>
+
+        <div
+          className="
+            size-10
+            rounded-xl
+            bg-amber-100
+            flex items-center
+            justify-center
+            text-amber-600
+          "
+        >
+          ⏳
+        </div>
+
+      </div>
+    </div>
+
+
+    {/* FAILED */}
+    <div
+      className="
+        rounded-xl
+        border border-red-200
+        bg-red-50/60
+        p-4
+      "
+    >
+      <div className="flex items-center justify-between">
+
+        <div>
+          <div className="text-[10px] font-semibold uppercase tracking-wider text-red-600">
+            Total Failed
+          </div>
+
+          <div className="mt-1 text-xl font-bold text-red-700">
+            {formatCurrency(totalFailedAmount)}
+          </div>
+
+          <div className="mt-1 text-[10px] text-red-600">
+            {paymentSummary.failedCount} failed payment
+            {paymentSummary.failedCount !== 1 ? "s" : ""}
+          </div>
+        </div>
+
+        <div
+          className="
+            size-10
+            rounded-xl
+            bg-red-100
+            flex items-center
+            justify-center
+            text-red-600
+          "
+        >
+          ✕
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+
+
+  {/* =====================================================
+      TRANSACTION TABLE
+  ====================================================== */}
+
+  <div className="overflow-x-auto -mx-1">
+
+    <table className="w-full text-sm">
+
+      <thead className="bg-[var(--hz-hover)]">
+
+        <tr className="text-left">
+
+          <th className="px-3 py-2.5 hz-label !text-[10px]">
+            Date
+          </th>
+
+          <th className="px-3 py-2.5 hz-label !text-[10px]">
+            Method
+          </th>
+
+          <th className="px-3 py-2.5 hz-label !text-[10px]">
+            Payment ID
+          </th>
+
+          <th className="px-3 py-2.5 hz-label !text-[10px]">
+            Transaction ID
+          </th>
+
+          <th className="px-3 py-2.5 hz-label !text-[10px]">
+            Status
+          </th>
+
+          <th className="px-3 py-2.5 hz-label !text-[10px] text-right">
+            Amount
+          </th>
+
+        </tr>
+
+      </thead>
+
+
+      <tbody>
+
+        {transactionsList?.length > 0 ? (
+
+          transactionsList.map((x) => {
+
+            const status =
+              x.paymentStatus?.toUpperCase() || "UNKNOWN";
+
+            const badgeClass =
+              STATUS_BADGE[status] ||
+              "hz-badge--inactive";
+
+            const displayDate =
+              x.paymentCompletedOn ||
+              x.paymentInitiatedOn ||
+              "--";
+
+            const paymentId =
+              x.orderId || "--";
+
+            const transactionId =
+              x.gatewayTransactionId ||
+              x.transactionId ||
+              "--";
+
+            const method =
+              x.paymentMethod || "--";
+
+            return (
+              <tr
+                key={x.id || x.transactionId}
+                className="
+                  hz-stripes-row
+                  border-t
+                  border-[var(--hz-border-soft)]
+                "
+              >
+
+                {/* DATE */}
+                <td
+                  className="
+                    px-3 py-2.5
+                    hz-mono
+                    text-[12px]
+                    text-[var(--hz-text-2)]
+                    whitespace-nowrap
+                  "
+                >
+                  {displayDate}
+                </td>
+
+
+                {/* METHOD */}
+                <td className="px-3 py-2.5">
+                  <span className="font-medium">
+                    {method}
+                  </span>
+
+                  {x.paymentGateway && (
+                    <div className="text-[10px] text-[var(--hz-text-2)] mt-0.5">
+                      {x.paymentGateway}
+                    </div>
                   )}
-                </tbody>
-                <tfoot>
-                  <tr className="border-t-2 border-[var(--hz-border)]">
-                    <td colSpan={5} className="px-3 py-2.5 text-right hz-label !text-[10px]">Paid</td>
-                    <td className="px-3 py-2.5 hz-mono text-right font-semibold">{formatCurrency(paid)}</td>
-                  </tr>
-                  <tr>
-                    <td colSpan={5} className="px-3 py-2 text-right hz-label !text-[10px]">Pending</td>
-                    <td className="px-3 py-2 hz-mono text-right">{formatCurrency(pending)}</td>
-                  </tr>
-                  <tr>
-                    <td colSpan={5} className="px-3 py-2 text-right hz-label !text-[10px]">Remaining</td>
-                    <td className="px-3 py-2 hz-mono text-right text-[var(--hz-cta)]">{formatCurrency(remaining)}</td>
-                  </tr>
-                </tfoot>
-              </table>
-            </div>
-          </Section>
+                </td>
+
+
+                {/* PAYMENT ID */}
+                <td className="px-3 py-2.5">
+
+                  <div
+                    className="
+                      hz-mono
+                      text-[12px]
+                      font-medium
+                    "
+                    title={paymentId}
+                  >
+                    {paymentId}
+                  </div>
+
+                </td>
+
+
+                {/* TRANSACTION ID */}
+                <td className="px-3 py-2.5">
+
+                  <div
+                    className="
+                      hz-mono
+                      text-[11px]
+                      max-w-[220px]
+                      truncate
+                    "
+                    title={transactionId}
+                  >
+                    {transactionId}
+                  </div>
+
+                </td>
+
+
+                {/* STATUS */}
+                <td className="px-3 py-2.5">
+
+                  <span
+                    className={`
+                      hz-badge
+                      ${badgeClass}
+                    `}
+                  >
+                    {status === "CHARGED"
+                      ? "PAID"
+                      : status === "SUCCESS"
+                      ? "PAID"
+                      : status === "NEW"
+                      ? "PENDING"
+                      : status}
+                  </span>
+
+                </td>
+
+
+                {/* AMOUNT */}
+                <td
+                  className="
+                    px-3 py-2.5
+                    hz-mono
+                    text-right
+                    font-semibold
+                    whitespace-nowrap
+                  "
+                >
+                  {formatCurrency(
+                    Number(x.amount || 0)
+                  )}
+                </td>
+
+              </tr>
+            );
+          })
+
+        ) : (
+
+          <tr>
+
+            <td
+              colSpan={6}
+              className="
+                px-3 py-8
+                text-center
+                text-sm
+                text-[var(--hz-text-2)]
+              "
+            >
+              No transactions found for this traveller.
+            </td>
+
+          </tr>
+
+        )}
+
+      </tbody>
+
+
+      {/* =================================================
+          SUMMARY FOOTER
+      ================================================== */}
+
+      <tfoot>
+
+        {/* PAID */}
+        <tr
+          className="
+            border-t-2
+            border-[var(--hz-border)]
+          "
+        >
+
+          <td
+            colSpan={5}
+            className="
+              px-3 py-2.5
+              text-right
+              hz-label
+              !text-[10px]
+            "
+          >
+            Total Paid
+          </td>
+
+          <td
+            className="
+              px-3 py-2.5
+              hz-mono
+              text-right
+              font-bold
+              text-[var(--hz-success)]
+            "
+          >
+            {formatCurrency(totalPaidAmount)}
+          </td>
+
+        </tr>
+
+
+        {/* PENDING */}
+        <tr>
+
+          <td
+            colSpan={5}
+            className="
+              px-3 py-2
+              text-right
+              hz-label
+              !text-[10px]
+            "
+          >
+            Total Pending
+          </td>
+
+          <td
+            className="
+              px-3 py-2
+              hz-mono
+              text-right
+              font-semibold
+              text-amber-600
+            "
+          >
+            {formatCurrency(totalPendingAmount)}
+          </td>
+
+        </tr>
+
+
+        {/* FAILED */}
+        <tr>
+
+          <td
+            colSpan={5}
+            className="
+              px-3 py-2
+              text-right
+              hz-label
+              !text-[10px]
+            "
+          >
+            Total Failed
+          </td>
+
+          <td
+            className="
+              px-3 py-2
+              hz-mono
+              text-right
+              font-semibold
+              text-red-600
+            "
+          >
+            {formatCurrency(totalFailedAmount)}
+          </td>
+
+        </tr>
+
+      </tfoot>
+
+    </table>
+
+  </div>
+
+</Section>
         )}
 
         {/* Remarks */}
