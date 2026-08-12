@@ -8,3 +8,362 @@
 .tbl-full-data-width{
     text-wrap: nowrap;
 }
+/* =========================================================
+   ENTERPRISE PAYMENT PRINT REPORT
+========================================================= */
+
+#payment-print-report {
+    display: none;
+  }
+  
+  @media print {
+  
+    /* Hide everything except print report */
+    body * {
+      visibility: hidden !important;
+    }
+  
+    #payment-print-report,
+    #payment-print-report * {
+      visibility: visible !important;
+    }
+  
+    #payment-print-report {
+      display: block !important;
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      background: white;
+      color: #111827;
+      padding: 24px 28px;
+    }
+  
+  
+    /* ---------------------------------------------
+       PAGE
+    --------------------------------------------- */
+  
+    @page {
+      size: A4 landscape;
+      margin: 12mm;
+    }
+  
+  
+    /* ---------------------------------------------
+       HEADER
+    --------------------------------------------- */
+  
+    .print-report-header {
+      width: 100%;
+    }
+  
+    .company-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+  
+      padding-bottom: 14px;
+  
+      border-bottom: 2px solid #111827;
+    }
+  
+    .company-info h1 {
+      margin: 0;
+  
+      font-size: 22px;
+      font-weight: 800;
+  
+      letter-spacing: -0.3px;
+      color: #111827;
+    }
+  
+    .company-info p {
+      margin: 3px 0 0;
+  
+      font-size: 10px;
+      color: #6b7280;
+    }
+  
+    .company-info p:last-child {
+      margin-top: 8px;
+  
+      font-size: 13px;
+      font-weight: 700;
+  
+      color: #111827;
+    }
+  
+  
+    /* ---------------------------------------------
+       REPORT META
+    --------------------------------------------- */
+  
+    .report-meta {
+      display: flex;
+      gap: 32px;
+  
+      text-align: right;
+    }
+  
+    .report-meta div {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+  
+    .report-meta span,
+    .report-period span,
+    .print-summary span {
+      font-size: 8px;
+  
+      text-transform: uppercase;
+      letter-spacing: 0.7px;
+  
+      color: #6b7280;
+    }
+  
+    .report-meta strong {
+      font-size: 10px;
+      font-weight: 700;
+      color: #111827;
+    }
+  
+  
+    /* ---------------------------------------------
+       REPORT PERIOD
+    --------------------------------------------- */
+  
+    .report-period {
+      display: flex;
+      justify-content: space-between;
+  
+      margin-top: 14px;
+      padding: 10px 12px;
+  
+      background: #f8fafc;
+  
+      border: 1px solid #e5e7eb;
+      border-radius: 6px;
+    }
+  
+    .report-period div {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+  
+    .report-period strong {
+      font-size: 10px;
+      color: #111827;
+    }
+  
+  
+    /* ---------------------------------------------
+       SUMMARY
+    --------------------------------------------- */
+  
+    .print-summary {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+  
+      margin-top: 10px;
+  
+      border: 1px solid #d1d5db;
+    }
+  
+    .print-summary div {
+      padding: 8px 12px;
+  
+      border-right: 1px solid #d1d5db;
+    }
+  
+    .print-summary div:last-child {
+      border-right: none;
+    }
+  
+    .print-summary strong {
+      display: block;
+  
+      margin-top: 3px;
+  
+      font-size: 12px;
+      font-weight: 800;
+  
+      color: #111827;
+    }
+  
+  
+    /* ---------------------------------------------
+       TABLE
+    --------------------------------------------- */
+  
+    .print-payment-table {
+      width: 100%;
+  
+      margin-top: 18px;
+  
+      border-collapse: collapse;
+  
+      table-layout: fixed;
+  
+      font-size: 8.5px;
+    }
+  
+    .print-payment-table thead {
+      display: table-header-group;
+    }
+  
+    .print-payment-table thead tr {
+      background: #111827;
+      color: white;
+    }
+  
+    .print-payment-table th {
+      padding: 8px 6px;
+  
+      text-align: left;
+  
+      font-size: 8px;
+      font-weight: 700;
+  
+      text-transform: uppercase;
+      letter-spacing: 0.35px;
+  
+      border: 1px solid #111827;
+    }
+  
+    .print-payment-table td {
+      padding: 7px 6px;
+  
+      vertical-align: middle;
+  
+      border: 1px solid #d1d5db;
+  
+      color: #1f2937;
+    }
+  
+    .print-payment-table tbody tr:nth-child(even) {
+      background: #f8fafc;
+    }
+  
+    .print-payment-table tr {
+      page-break-inside: avoid;
+    }
+  
+  
+    /* ---------------------------------------------
+       COLUMN WIDTHS
+    --------------------------------------------- */
+  
+    .print-payment-table th:nth-child(1),
+    .print-payment-table td:nth-child(1) {
+      width: 3%;
+      text-align: center;
+    }
+  
+    .print-payment-table th:nth-child(2),
+    .print-payment-table td:nth-child(2) {
+      width: 12%;
+    }
+  
+    .print-payment-table th:nth-child(3),
+    .print-payment-table td:nth-child(3) {
+      width: 12%;
+    }
+  
+    .print-payment-table th:nth-child(4),
+    .print-payment-table td:nth-child(4) {
+      width: 16%;
+    }
+  
+    .print-payment-table th:nth-child(5),
+    .print-payment-table td:nth-child(5) {
+      width: 13%;
+    }
+  
+    .print-payment-table th:nth-child(6),
+    .print-payment-table td:nth-child(6) {
+      width: 9%;
+    }
+  
+    .print-payment-table th:nth-child(7),
+    .print-payment-table td:nth-child(7) {
+      width: 8%;
+    }
+  
+    .print-payment-table th:nth-child(8),
+    .print-payment-table td:nth-child(8) {
+      width: 9%;
+    }
+  
+    .print-payment-table th:nth-child(9),
+    .print-payment-table td:nth-child(9) {
+      width: 18%;
+    }
+  
+  
+    /* ---------------------------------------------
+       DATA FORMATTING
+    --------------------------------------------- */
+  
+    .print-mono {
+      font-family: "Courier New", monospace;
+  
+      font-size: 7.5px;
+  
+      word-break: break-all;
+    }
+  
+    .print-amount {
+      text-align: right;
+  
+      font-weight: 700;
+  
+      white-space: nowrap;
+    }
+  
+  
+    /* ---------------------------------------------
+       FOOTER
+    --------------------------------------------- */
+  
+    .print-report-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+  
+      margin-top: 18px;
+      padding-top: 9px;
+  
+      border-top: 1px solid #d1d5db;
+  
+      font-size: 7.5px;
+      color: #6b7280;
+    }
+  
+    .print-report-footer div {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+  
+    .print-report-footer strong {
+      color: #374151;
+      font-size: 8px;
+    }
+  
+  
+    /* ---------------------------------------------
+       REMOVE NORMAL DASHBOARD
+    --------------------------------------------- */
+  
+    button,
+    nav,
+    header,
+    aside,
+    input,
+    select {
+      display: none !important;
+    }
+  
+  }
