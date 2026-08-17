@@ -11,10 +11,13 @@ export default function Topbar({ onToggleSidebar, onToggleMobile, dark, setDark 
   const [confirmLogout, setConfirmLogout] = useState(false);
 
   const doLogout = () => {
-    logout();
+    console.log("Logging out user:", user);
     setConfirmLogout(false);
-    toast.success("Signed out", { description: "You have been logged out securely." });
+    localStorage.removeItem('hstz_admin_auth_status')
+    localStorage.removeItem('hstz_admin_info')
+    toast.success("Signed out", { description: "You have been logged out securely." });    
     navigate("/login", { replace: true });
+
   };
 
   return (

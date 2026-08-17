@@ -132,6 +132,7 @@ export default function TravellerProfileModalV2({ open, onClose, traveller, onSa
     emiAmount: t.emiAmount,
     packageId: t.packageId,
     userId: t.userId,
+    travellerId: t.travellerId,
   };
   // Package Details
   const pkg = {
@@ -141,6 +142,7 @@ export default function TravellerProfileModalV2({ open, onClose, traveller, onSa
     planType: t.planType,
     paymentCycle: t.paymentCycle,
     durationName: t.durationName,
+    bookingNo: t.bookingNo,
   };
   // User / Traveller Details
   const user = {
@@ -240,7 +242,7 @@ export default function TravellerProfileModalV2({ open, onClose, traveller, onSa
           >
             <Printer className="size-4" /> Print statement
           </button> */}
-          {!isClosed && booking.status === "Confirmed" && 1===2  && (
+          {!isClosed && (booking.status === "Completed" || booking.status === "Confirmed")  && (
             <button
               className="text-white h-10 px-5 rounded-lg font-medium text-sm transition-colors bg-[#C04235] hover:bg-[#A03228] inline-flex items-center gap-2"
               onClick={() => setCloseOpen(true)}

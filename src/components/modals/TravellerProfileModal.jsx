@@ -59,7 +59,7 @@ export default function TravellerProfileModal({ open, onClose, traveller, onSave
   const remaining = booking ? Math.max(0, booking.totalAmount - paid) : 0;
 
   const isClosed = booking?.status === "closed";
-
+  console.log('booking',booking)
   return (
     <HzModal
       open={open}

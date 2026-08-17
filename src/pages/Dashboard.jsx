@@ -1,9 +1,5 @@
 import { useMemo, useState } from "react";
-import {
-  ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid,
-  PieChart, Pie, Cell, BarChart, Bar, Legend,
-} from "recharts";
-import { CalendarRange, IndianRupee, Package as PackageIcon, Eye, ArrowUpRight } from "lucide-react";
+import { CalendarRange, IndianRupee, Package as PackageIcon, Eye, ArrowUpRight, Clock, CheckCircle, Users, UserRound } from "lucide-react";
 import { db, formatCurrency, formatDate } from "@/lib/mockData";
 import HzPageHeader from "@/components/shared/HzPageHeader";
 import HzStatCard from "@/components/shared/HzStatCard";
@@ -11,51 +7,32 @@ import { Link } from "react-router-dom";
 import Helper from "@/Utils/Helper";
 import { useQuery } from "@tanstack/react-query";
 import apiService from "@/Utils/ApiService";
-import { array } from "zod";
 import Loader from "@/components/Loader/Loader";
 
 export default function Dashboard() {
-  const state = db.load();
-  const { bookings, packages, transactions, users } = state;
-  const [bookingNo, setBookingNo] = useState("");
   const [bookingStatus, setBookingStatus] = useState("all");
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
   const [debouncedBookingNo, setDebouncedBookingNo] = useState("");
-  const totalBookings = bookings.length;
-  const totalSales = transactions.filter((t) => t.status === "paid").reduce((s, t) => s + t.amount, 0);
-  const activePackages = packages.filter((p) => p.status === "active").length;
-  const visitors = 12480;
 
   const loggedInUser = Helper.getLoginUserDetails() ?? null; 
-
-  const trendData = useMemo(() => {
-    const months = ["Aug", "Sep", "Oct", "Nov", "Dec", "Jan", "Feb"];
-    return months.map((m, i) => ({
-      month: m,
-      bookings: 8 + i * 4 + (i % 2 === 0 ? 6 : 2),
-      revenue: 220000 + i * 90000 + (i === 4 ? 60000 : 0),
-    }));
-  }, []);
-
   const visitorPie = [
     { name: "Direct", value: 4200, fill: "#162D24" },
     { name: "Referral", value: 3100, fill: "#D9734E" },
     { name: "Search", value: 3500, fill: "#4A7856" },
     { name: "Social", value: 1680, fill: "#D4A373" },
   ];
-
-  const packagePopularity = useMemo(() => {
-    return packages.slice(0, 5).map((p) => {
-      const count = bookings.filter((b) => b.packageId === p.id).length;
-      return { name: p.name.length > 18 ? p.name.slice(0, 18) + "…" : p.name, count: count + 4 };
-    });
-  }, [packages, bookings]);
-
-  const recentBookings = bookings.slice().sort((a, b) => new Date(b.bookingDate) - new Date(a.bookingDate)).slice(0, 5);
-
-  const userById = (id) => users.find((u) => u.id === id);
-  const pkgById = (id) => packages.find((p) => p.id === id);
+  const getDashboardSummary = async () => {
+    
+    const { status, message, responseValue } =
+      await apiService.get(`admin/GetAdminDashboardSummary?userId=${loggedInUser.id}`);
+  
+    if (status === 1 && Array.isArray(responseValue) && responseValue.length > 0) {
+      return responseValue[0] || null;
+    }
+  
+    throw new Error(message || "Failed to fetch booking list");
+  };
   const getBookingList = async (payload) => {
     console.log("API Payload:", payload);
     const { status, message, responseValue } =
@@ -68,6 +45,22 @@ export default function Dashboard() {
     throw new Error(message || "Failed to fetch booking list");
   };
   // React Query
+  const { data: dashboardData = [], isDashboardLoading } = useQuery({
+    queryKey: [
+      "dashboardSummary"
+    ],
+  
+    queryFn: () =>
+      getDashboardSummary(),
+  
+    keepPreviousData: true,
+  
+    // caching
+    staleTime: 5 * 60 * 1000,
+    cacheTime: 10 * 60 * 1000,
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
+  });
   const { data: bookingList = [], isLoading } = useQuery({
     queryKey: [
       "bookingList",
@@ -94,7 +87,7 @@ export default function Dashboard() {
     refetchOnWindowFocus: false,
     refetchOnMount: false,
   });
-  console.log("Booking List:", bookingList);
+  console.log("Dashboard Data:", dashboardData);
   return (
     <div data-testid="dashboard-page">
       <HzPageHeader
@@ -117,13 +110,64 @@ export default function Dashboard() {
         <HzStatCard label="Visitors" value={visitors.toLocaleString()} delta={-1.8} deltaLabel="vs last week" icon={Eye} accent="info" testid="stat-visitors" />
       </div> */}
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5">
-        <HzStatCard label="Total Bookings" value={0}  icon={CalendarRange} accent="default" testid="stat-bookings" />
-        <HzStatCard label="Total Sales" value={0}  icon={IndianRupee} accent="cta" testid="stat-sales" />
-        {/* <HzStatCard label="Active Packages" value={0} delta={2.1} deltaLabel="new this week" icon={PackageIcon} accent="success" testid="stat-packages" /> */}
-        <HzStatCard label="Visitors" value={0}  icon={Eye} accent="info" testid="stat-visitors" />
+        <HzStatCard
+          label="Total Bookings"
+          value={dashboardData?.totalBookings ?? "-"}
+          icon={CalendarRange}
+          accent="default"
+          testid="stat-total-bookings"
+        />
+
+        <HzStatCard
+          label="Total Sales"
+          value={dashboardData?.totalSales ?? "-"}
+          icon={IndianRupee}
+          accent="cta"
+          testid="stat-total-sales"
+        />
+
+        <HzStatCard
+          label="Active Bookings"
+          value={dashboardData?.activeBookings ?? "-"}
+          icon={PackageIcon}
+          accent="success"
+          testid="stat-active-bookings"
+        />
+
+        <HzStatCard
+          label="Pending Bookings"
+          value={dashboardData?.pendingBookings ?? "-"}
+          icon={Clock}
+          accent="warning"
+          testid="stat-pending-bookings"
+        />
+
+        <HzStatCard
+          label="Closed Bookings"
+          value={dashboardData?.closeBookings ?? "-"}
+          icon={CheckCircle}
+          accent="default"
+          testid="stat-closed-bookings"
+        />
+
+        <HzStatCard
+          label="Active Users"
+          value={dashboardData?.totalActiveUser ?? "-"}
+          icon={Users}
+          accent="success"
+          testid="stat-active-users"
+        />
+
+        <HzStatCard
+          label="Active Travellers"
+          value={dashboardData?.totalActiveTraveller ?? "-"}
+          icon={UserRound}
+          accent="success"
+          testid="stat-active-travellers"
+        />
       </div>
 
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-5 mt-6">
+      {/* <div className="grid grid-cols-1 xl:grid-cols-3 gap-5 mt-6">
         <div className="hz-card p-6 xl:col-span-2" data-testid="chart-trends">
           <div className="flex items-end justify-between mb-6">
             <div>
@@ -136,7 +180,7 @@ export default function Dashboard() {
             </div>
           </div>
           <div style={{ width: "100%", height: 280 }}>
-            {/* <ResponsiveContainer>
+            <ResponsiveContainer>
               <AreaChart data={trendData} margin={{ top: 5, right: 8, left: -10, bottom: 0 }}>
                 <defs>
                   <linearGradient id="gPine" x1="0" y1="0" x2="0" y2="1">
@@ -159,7 +203,7 @@ export default function Dashboard() {
                 <Area yAxisId="left" type="monotone" dataKey="bookings" stroke="#162D24" strokeWidth={2} fill="url(#gPine)" />
                 <Area yAxisId="right" type="monotone" dataKey="revenue" stroke="#D9734E" strokeWidth={2} fill="url(#gCta)" />
               </AreaChart>
-            </ResponsiveContainer> */}
+            </ResponsiveContainer>
           </div>
         </div>
 
@@ -167,14 +211,14 @@ export default function Dashboard() {
           <span className="hz-label">Visitor sources</span>
           <h3 className="hz-heading text-xl mt-1 mb-4">By channel</h3>
           <div style={{ width: "100%", height: 220 }}>
-            {/* <ResponsiveContainer>
+            <ResponsiveContainer>
               <PieChart>
                 <Pie data={visitorPie} dataKey="value" innerRadius={55} outerRadius={85} paddingAngle={2} stroke="none">
                   {visitorPie.map((e) => <Cell key={e.name} fill={e.fill} />)}
                 </Pie>
                 <Tooltip contentStyle={{ borderRadius: 12, border: "1px solid #E5E2D9" }} />
               </PieChart>
-            </ResponsiveContainer> */}
+            </ResponsiveContainer>
           </div>
           <div className="grid grid-cols-2 gap-2 mt-2">
             {visitorPie.map((v) => (
@@ -185,7 +229,7 @@ export default function Dashboard() {
             ))}
           </div>
         </div>
-      </div>
+      </div> */}
 
       <div className="grid grid-cols-1 xl:grid-cols-1 gap-5 mt-6">
         <div className="hz-card p-6 xl:col-span-2" data-testid="recent-bookings">

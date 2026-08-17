@@ -7,7 +7,9 @@ import {
   XCircle, ArrowRight,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-
+import Helper from "@/Utils/Helper";
+import apiService from "@/Utils/ApiService";
+import { toast } from "sonner";
 export default function BookingClosureModalV2({
   open,
   onClose,
@@ -24,16 +26,20 @@ export default function BookingClosureModalV2({
   const [winnerTravellerId, setWinnerTravellerId] = useState("");
   const [errors, setErrors] = useState({});
   const [closureNumber, setClosureNumber] = useState("");
+  const [closureResponse, setClosureResponse] = useState(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   if (!open || !booking) return null;
-
+  console.log('transactions ::',transactions)
+  console.log('packageData ::',packageData)
+  console.log('booking ::',booking)
   const reset = () => {
     setStep(1); setRemark(""); setDiscount("");
     setWinnerEnabled(false); setWinnerTravellerId("");
     setErrors({}); setClosureNumber("");
   };
   const close = () => { onClose(); reset(); };
-
+  const loggedInUser = Helper.getLoginUserDetails(); 
   const paid = transactions
     .filter((t) => t.bookingId === booking.id && t.status === "paid")
     .reduce((s, t) => s + t.amount, 0);
@@ -48,7 +54,7 @@ export default function BookingClosureModalV2({
       : winnerTraveller.name) || ""
     : "";
 
-  const submit = () => {
+  const submit = async () => {
     const e = {};
     if (!remark.trim()) e.remark = "Remark is required to close this booking.";
     if (discount !== "" && (Number.isNaN(Number(discount)) || Number(discount) < 0)) {
@@ -56,41 +62,69 @@ export default function BookingClosureModalV2({
     } else if (Number(discount) > remaining) {
       e.discount = `Discount cannot exceed remaining ${formatCurrency(remaining)}.`;
     }
-    if (winnerEnabled && !winnerTravellerId) e.winner = "Pick which traveller is the winner.";
     setErrors(e);
     if (Object.keys(e).length) return;
-
-    const cn = `HZ-CLB-${Date.now().toString().slice(-8)}`;
-    setClosureNumber(cn);
-
-    const s = db.load();
-    const idx = s.bookings.findIndex((b) => b.id === booking.id);
-    if (idx >= 0) {
-      s.bookings[idx] = {
-        ...s.bookings[idx],
-        status: "closed",
-        closeReason: remark,
-        discount: Number(discount) || 0,
-        winnerName,
-        winnerTravellerId: winnerTravellerId || "",
-        closureNumber: cn,
-        closedAt: new Date().toISOString(),
+    setIsSubmitting(true);
+    try{
+      const payload = {
+        bookingId: booking.id || 0,
+        remark: remark.trim(),
+        finalDiscount: discount ? Number(discount) : 0,
+        isWinner: winnerEnabled,
+        winnerTravellerId: booking.travellerId ?? 0,
+        updatedBy: loggedInUser?.id || 0,
       };
-      // Tag the chosen traveller with winnerInfo
-      if (winnerEnabled && winnerTravellerId) {
-        const tr = s.bookings[idx].travellers?.find((t) => t.id === winnerTravellerId);
-        if (tr) {
-          tr.winnerInfo = {
-            month: new Date().toISOString().slice(0, 7),
-            remark: `Winner of trip · ${remark}`,
-            markedAt: new Date().toISOString(),
-          };
-        }
+      console.log('payload ::',payload)
+      const {status,message,responseValue} = await apiService.post(`admin/CloseBooking`,payload);
+      if(status === 1){
+        console.log('responseValue ::',responseValue)
+        const data = Array.isArray(responseValue) ? responseValue[0] : null;
+        setClosureResponse(data);
+        onClosed?.({ remark, discount: Number(discount) || 0, winner: winnerName, closureNumber: data?.closureNumber || "" });
+        setStep(2);
       }
-      db.save(s);
+      else{
+        toast.error("Failed to close booking", { description: message || "An error occurred while closing the booking. Please try again." });
+      }
     }
-    onClosed?.({ remark, discount: Number(discount) || 0, winner: winnerName, closureNumber: cn });
-    setStep(2);
+    catch(err){
+      console.error('Error closing booking:', err);
+      toast.error("Failed to close booking", { description: "An error occurred while closing the booking. Please try again." });
+    }
+    finally{
+      setIsSubmitting(false);
+    }
+    // const cn = `HZ-CLB-${Date.now().toString().slice(-8)}`;
+    // setClosureNumber(cn);
+
+    // const s = db.load();
+    // const idx = s.bookings.findIndex((b) => b.id === booking.id);
+    // if (idx >= 0) {
+    //   s.bookings[idx] = {
+    //     ...s.bookings[idx],
+    //     status: "closed",
+    //     closeReason: remark,
+    //     discount: Number(discount) || 0,
+    //     winnerName,
+    //     winnerTravellerId: winnerTravellerId || "",
+    //     closureNumber: cn,
+    //     closedAt: new Date().toISOString(),
+    //   };
+    //   // Tag the chosen traveller with winnerInfo
+    //   if (winnerEnabled && winnerTravellerId) {
+    //     const tr = s.bookings[idx].travellers?.find((t) => t.id === winnerTravellerId);
+    //     if (tr) {
+    //       tr.winnerInfo = {
+    //         month: new Date().toISOString().slice(0, 7),
+    //         remark: `Winner of trip · ${remark}`,
+    //         markedAt: new Date().toISOString(),
+    //       };
+    //     }
+    //   }
+    //   db.save(s);
+    // }
+    // onClosed?.({ remark, discount: Number(discount) || 0, winner: winnerName, closureNumber: cn });
+    // setStep(2);
   };
 
   return (
@@ -113,11 +147,22 @@ export default function BookingClosureModalV2({
           <>
             <button className="hz-btn-ghost" onClick={close} data-testid="booking-closure-cancel">Cancel</button>
             <button
-              className="text-white h-10 px-5 rounded-lg font-medium text-sm transition-colors bg-[#C04235] hover:bg-[#A03228] inline-flex items-center gap-2"
+              className="text-white h-10 px-5 rounded-lg font-medium text-sm transition-colors bg-[#C04235] hover:bg-[#A03228] disabled:opacity-70 disabled:cursor-not-allowed inline-flex items-center gap-2"
               onClick={submit}
+              disabled={isSubmitting}
               data-testid="booking-closure-confirm"
             >
-              <XCircle className="size-4" strokeWidth={1.75} /> Close booking
+              {isSubmitting ? (
+                <>
+                  <span className="size-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  Closing...
+                </>
+              ) : (
+                <>
+                  <XCircle className="size-4" strokeWidth={1.75} />
+                  Close booking
+                </>
+              )}
             </button>
           </>
         ) : (
@@ -144,7 +189,7 @@ export default function BookingClosureModalV2({
             <div className="flex-1 min-w-0">
               <div className="hz-heading text-base sm:text-lg font-medium leading-tight">{packageData?.name}</div>
               <div className="text-xs text-[var(--hz-text-2)] mt-1 hz-mono">
-                {booking.id} · {booking.durationDays} days · Travel {formatDate(booking.travelDate)}
+                {packageData.bookingNo} · {packageData.durationName} days
               </div>
             </div>
           </div>
@@ -153,15 +198,15 @@ export default function BookingClosureModalV2({
           <div className="grid grid-cols-3 gap-2 sm:gap-3">
             <div className="hz-card p-4">
               <div className="hz-label">Total cost</div>
-              <div className="hz-heading text-lg sm:text-xl font-medium mt-1 hz-mono">{formatCurrency(booking.totalAmount)}</div>
+              <div className="hz-heading text-lg sm:text-xl font-medium mt-1 hz-mono">{formatCurrency(booking.netAmount ?? 0)}</div>
             </div>
             <div className="hz-card p-4">
               <div className="hz-label">Paid</div>
-              <div className="hz-heading text-lg sm:text-xl font-medium mt-1 hz-mono text-[var(--hz-success)]">{formatCurrency(paid)}</div>
+              <div className="hz-heading text-lg sm:text-xl font-medium mt-1 hz-mono text-[var(--hz-success)]">{formatCurrency(booking.paidAmount ?? 0)}</div>
             </div>
             <div className="hz-card p-4">
               <div className="hz-label">Remaining</div>
-              <div className="hz-heading text-lg sm:text-xl font-medium mt-1 hz-mono text-[var(--hz-cta)]">{formatCurrency(remaining)}</div>
+              <div className="hz-heading text-lg sm:text-xl font-medium mt-1 hz-mono text-[var(--hz-cta)]">{formatCurrency(booking.pendingAmount ?? 0)}</div>
             </div>
           </div>
 
@@ -186,7 +231,15 @@ export default function BookingClosureModalV2({
                 min="0"
                 placeholder="0"
                 value={discount}
-                onChange={(e) => setDiscount(e.target.value)}
+                onChange={(e) => {
+                  const value = Number(e.target.value);
+                  const pendingAmount = Number(booking.pendingAmount ?? 0);
+                  setDiscount(
+                    value > pendingAmount
+                      ? pendingAmount
+                      : e.target.value
+                  );
+                }}
                 error={errors.discount}
                 testid="booking-closure-discount"
               />
@@ -212,7 +265,7 @@ export default function BookingClosureModalV2({
                     <div className="text-[11px] text-[var(--hz-text-2)] mt-0.5">Tag a traveller from this booking as the trip winner.</div>
                   </div>
                 </div>
-                {winnerEnabled && (
+                {/* {winnerEnabled && (
                   <div className="mt-3 hz-fade-up">
                     <select
                       className={`hz-input !pl-4 ${errors.winner ? "hz-input--error" : ""}`}
@@ -228,7 +281,7 @@ export default function BookingClosureModalV2({
                     </select>
                     {errors.winner && <div className="hz-input-error-msg">{errors.winner}</div>}
                   </div>
-                )}
+                )} */}
               </div>
             </div>
           </div>
@@ -250,12 +303,12 @@ export default function BookingClosureModalV2({
 
           <div className="hz-card p-5 text-left mt-6">
             <div className="hz-label">Closure number</div>
-            <div className="hz-heading text-2xl hz-mono mt-1 text-[var(--hz-cta)]">{closureNumber}</div>
+            <div className="hz-heading text-2xl hz-mono mt-1 text-[var(--hz-cta)]">{closureResponse?.closureNumber ?? ""}</div>
 
             <div className="grid grid-cols-2 gap-x-4 gap-y-3 mt-4 text-sm">
               <div>
                 <div className="hz-label !text-[10px]">Booking</div>
-                <div className="mt-0.5 hz-mono">{booking.id}</div>
+                <div className="mt-0.5 hz-mono">{booking?.bookingNo ?? '-'}</div>
               </div>
               <div>
                 <div className="hz-label !text-[10px]">Package</div>
@@ -263,7 +316,7 @@ export default function BookingClosureModalV2({
               </div>
               <div>
                 <div className="hz-label !text-[10px]">Closed on</div>
-                <div className="mt-0.5">{formatDate(new Date().toISOString())}</div>
+                <div className="mt-0.5">{closureResponse?.closureDate}</div>
               </div>
               <div>
                 <div className="hz-label !text-[10px]">Discount applied</div>
@@ -273,12 +326,12 @@ export default function BookingClosureModalV2({
                 <div className="hz-label !text-[10px]">Remark</div>
                 <div className="mt-0.5">{remark}</div>
               </div>
-              {winnerName && (
+              {/* {winnerName && (
                 <div className="col-span-2 p-3 rounded-lg bg-[#FDF1EB] inline-flex items-center gap-2">
                   <Trophy className="size-4 text-[var(--hz-cta)]" />
                   <span className="text-sm"><span className="hz-label !text-[10px]">Winner</span><br /><b>{winnerName}</b></span>
                 </div>
-              )}
+              )} */}
             </div>
           </div>
           <div className="mt-5 inline-flex items-center gap-2 text-xs text-[var(--hz-text-2)]">

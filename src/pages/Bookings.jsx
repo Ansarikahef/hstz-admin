@@ -21,7 +21,6 @@ import UserDetailsModal from "@/components/modals/UserDetailsModal";
 import { toast } from "sonner";
 import { useQuery } from "@tanstack/react-query";
 import apiService from "@/Utils/ApiService";
-import { formatDate } from "@/lib/mockData"; // keep your formatter
 import Loader from "@/components/Loader/Loader";
 import ConfirmModal from "@/components/modals/ConfirmModal";
 import UpdateUserStatusModal from "@/components/modals/UpdateUserStatusModal";
@@ -36,6 +35,7 @@ export default function Bookings() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const today = new Date();
+  console.log("Today's date:", today);
   // First day of current month
   const firstDayOfMonth = new Date(
     today.getFullYear(),
@@ -44,6 +44,13 @@ export default function Bookings() {
   );
   const formatDate = (date) => {
     return date.toISOString().split("T")[0];
+  };
+  const formatDateV2 = (date) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+  
+    return `${year}-${month}-${day}`;
   };
   const [searchKey, setSearchKey] = useState("");
   const [isShowBtnLoader, setIsShowBtnLoader] = useState(false);
@@ -56,11 +63,11 @@ export default function Bookings() {
   const [confirm, setConfirm] = useState({ open: false, id: null });
   const [updateUserStatus, setUpdateUserStatus] = useState({ open: false, id: null });
   const [dateFilter, setDateFilter] = useState("thisMonth");
-  const [fromDate, setFromDate] = useState(formatDate(firstDayOfMonth));
-  const [toDate, setToDate] = useState(formatDate(today));
+  const [fromDate, setFromDate] = useState(formatDateV2(firstDayOfMonth));
+  const [toDate, setToDate] = useState(formatDateV2(today));
   const [bookingStatus, setBookingStatus] = useState("all");
   const loggedInUser = Helper.getLoginUserDetails();
-
+  
   const handleDateFilter = (value) => {
     setDateFilter(value);
   
@@ -71,9 +78,9 @@ export default function Bookings() {
         today.getMonth(),
         1
       );
-  
-      setFromDate(start.toISOString().split("T")[0]);
-      setToDate(today.toISOString().split("T")[0]);
+    
+      setFromDate(formatDateV2(start));
+      setToDate(formatDateV2(today));
     }
   
     // Last 3 Months

@@ -68,55 +68,6 @@ export default function Payments() {
   const [selectedTransaction, setSelectedTransaction] = useState(null);
   const [showTransactionDrawer, setShowTransactionDrawer] = useState(false);
   const loggedInUser = Helper.getLoginUserDetails();
-
-  const handleDateFilter = (value) => {
-    setDateFilter(value);
-  
-    // Current Month
-    if (value === "thisMonth") {
-      const start = new Date(
-        today.getFullYear(),
-        today.getMonth(),
-        1
-      );
-  
-      setFromDate(start.toISOString().split("T")[0]);
-      setToDate(today.toISOString().split("T")[0]);
-    }
-  
-    // Last 3 Months
-    else if (value === "last3Months") {
-      const start = new Date(
-        today.getFullYear(),
-        today.getMonth() - 2,
-        1
-      );
-  
-      setFromDate(start.toISOString().split("T")[0]);
-      setToDate(today.toISOString().split("T")[0]);
-    }
-  
-    // This Year
-    else if (value === "thisYear") {
-      const start = new Date(today.getFullYear(), 0, 1);
-  
-      setFromDate(start.toISOString().split("T")[0]);
-      setToDate(today.toISOString().split("T")[0]);
-    }
-  
-    // Custom
-    else if (value === "custom") {
-      setFromDate("");
-      setToDate("");
-    }
-  
-    // All
-    else {
-      setFromDate("");
-      setToDate("");
-    }
-  };
-
   const getPaymentTransactionsAdmin = async (payload) => {
     console.log("Payment API Payload:", payload);
   
@@ -145,44 +96,9 @@ export default function Payments() {
       message || "Failed to fetch payment transactions"
     );
   };
-  const remove = async() => {
-    try{
-      setIsShowBtnLoader(true);
-      const payload = {
-        key: confirm.id ,
-        userId: loggedInUser?.id || 0,
-      }
-      const { status, message } = await apiService.post("admin/DeleteUser", payload);
-      console.log("Delete user response:", { status, message });
-      if(status === 1){
-        setConfirm({ open: false, id: null });
-        toast.success(message || "User removed");
-        queryClient.invalidateQueries({
-          queryKey: ["users"],
-        });
-      }
-      else{
-        toast.error(message || "Failed to remove user");
-      }
-    }
-    catch(e){
-      toast.error("Failed to remove user");
-    }
-    finally{
-      setIsShowBtnLoader(false);
-    }
-  };
   const handleViewTransaction = (transaction) => {
     setSelectedTransaction(transaction);
     setShowTransactionDrawer(true);
-  };
-  
-  const closeTransactionDrawer = () => {
-    setShowTransactionDrawer(false);
-  
-    setTimeout(() => {
-      setSelectedTransaction(null);
-    }, 250);
   };
   // React Query
   const {
@@ -354,10 +270,8 @@ console.log("Payment Data:", paymentData);
           </div>
         ))}
       </div>
-
       {/* Search */}
-    
-      <div className="hz-card p-4 sm:p-5 mb-6" data-testid="travellers-filters">
+        <div className="hz-card p-4 sm:p-5 mb-6" data-testid="travellers-filters">
           <div className="grid grid-cols-1 md:grid-cols-12 gap-3">
           <div className="md:col-span-2">
               <select className="hz-input !pl-4" value={searchType} onChange={(e) => setSearchType(e.target.value)} data-testid="travellers-filter-gender">
@@ -413,299 +327,289 @@ console.log("Payment Data:", paymentData);
           </div>
         </div>
         <div className="space-y-5">
+            {/* ================= PAYMENT HEADER ================= */}
+          <div className="relative overflow-hidden rounded-2xl border border-[var(--hz-border)] bg-white shadow-sm">
+              {/* Decorative background */}
+              <div className="pointer-events-none absolute -right-16 -top-16 h-48 w-48 rounded-full bg-emerald-100/40 blur-3xl" />
+              <div className="relative flex flex-col gap-4 p-5 sm:p-6 lg:flex-row lg:items-center lg:justify-between">
+                <div>
+                  <div className="flex items-center gap-3">
+                    <div
+                      className="
+                        flex h-11 w-11 items-center justify-center
+                        rounded-xl
+                        bg-emerald-50
+                        text-emerald-600
+                        ring-1 ring-emerald-100
+                      "
+                    >
+                      <Wallet className="h-5 w-5" />
+                    </div>
 
-{/* ================= PAYMENT HEADER ================= */}
-<div
-  className="
-    relative overflow-hidden rounded-2xl
-    border border-[var(--hz-border)]
-    bg-white
-    shadow-sm
-  "
->
-  {/* Decorative background */}
-  <div className="pointer-events-none absolute -right-16 -top-16 h-48 w-48 rounded-full bg-emerald-100/40 blur-3xl" />
-    <div className="pointer-events-none absolute -bottom-20 left-1/3 h-40 w-40 rounded-full bg-blue-100/30 blur-3xl" />
-        <div className="relative flex flex-col gap-4 p-5 sm:p-6 lg:flex-row lg:items-center lg:justify-between">
-          <div>
-            <div className="flex items-center gap-3">
-              <div
-                className="
-                  flex h-11 w-11 items-center justify-center
-                  rounded-xl
-                  bg-emerald-50
-                  text-emerald-600
-                  ring-1 ring-emerald-100
-                "
-              >
-                <Wallet className="h-5 w-5" />
+                    <div>
+                      <h2 className="text-lg font-bold text-[var(--hz-text)]">
+                        Payment Overview
+                      </h2>
+
+                      <p className="mt-0.5 text-xs text-gray-500">
+                        Real-time transaction and collection summary
+                      </p>
+                    </div>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+
+                  <button
+                    type="button"
+                    onClick={handleRefresh}
+                    disabled={isFetching}
+                    className="
+                      group inline-flex h-10 items-center gap-2
+                      rounded-xl
+                      border border-gray-200
+                      bg-white
+                      px-4
+                      text-sm font-semibold text-gray-700
+                      shadow-sm
+                      transition-all duration-200
+                      hover:border-emerald-200
+                      hover:bg-emerald-50
+                      hover:text-emerald-700
+                      disabled:cursor-not-allowed
+                      disabled:opacity-60
+                    "
+                  >
+                    <RefreshCw
+                      className={`h-4 w-4 ${
+                        isFetching ? "animate-spin" : "group-hover:rotate-180"
+                      } transition-transform duration-500`}
+                    />
+
+                    <span>
+                      {isFetching ? "Refreshing..." : "Refresh"}
+                    </span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handlePrint}
+                    className="
+                      inline-flex h-10 items-center gap-2
+                      rounded-xl
+                      bg-[var(--hz-text)]
+                      px-4
+                      text-sm font-semibold text-white
+                      shadow-sm
+                      transition-all duration-200
+                      hover:-translate-y-0.5
+                      hover:shadow-md
+                    "
+                  >
+                    <Printer className="h-4 w-4" />
+                    Print
+                  </button>
+
+                </div>
               </div>
-
-              <div>
-                <h2 className="text-lg font-bold text-[var(--hz-text)]">
-                  Payment Overview
-                </h2>
-
-                <p className="mt-0.5 text-xs text-gray-500">
-                  Real-time transaction and collection summary
-                </p>
-              </div>
-            </div>
           </div>
-          {/* ACTIONS */}
-          <div className="flex items-center gap-2">
-
-            <button
-              type="button"
-              onClick={handleRefresh}
-              disabled={isFetching}
+          {/* ================= SUMMARY CARDS ================= */}
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            {/* TOTAL PAID */}
+            <div
               className="
-                group inline-flex h-10 items-center gap-2
-                rounded-xl
-                border border-gray-200
-                bg-white
-                px-4
-                text-sm font-semibold text-gray-700
+                group relative overflow-hidden
+                rounded-2xl
+                border border-emerald-100
+                bg-gradient-to-br from-emerald-50 via-white to-white
+                p-5
                 shadow-sm
-                transition-all duration-200
-                hover:border-emerald-200
-                hover:bg-emerald-50
-                hover:text-emerald-700
-                disabled:cursor-not-allowed
-                disabled:opacity-60
-              "
-            >
-              <RefreshCw
-                className={`h-4 w-4 ${
-                  isFetching ? "animate-spin" : "group-hover:rotate-180"
-                } transition-transform duration-500`}
-              />
-
-              <span>
-                {isFetching ? "Refreshing..." : "Refresh"}
-              </span>
-            </button>
-
-            <button
-              type="button"
-              onClick={handlePrint}
-              className="
-                inline-flex h-10 items-center gap-2
-                rounded-xl
-                bg-[var(--hz-text)]
-                px-4
-                text-sm font-semibold text-white
-                shadow-sm
-                transition-all duration-200
-                hover:-translate-y-0.5
+                transition-all duration-300
+                hover:-translate-y-1
                 hover:shadow-md
               "
             >
-              <Printer className="h-4 w-4" />
-              Print
-            </button>
+              <div className="flex items-start justify-between">
 
-          </div>
-        </div>
-      </div>
-      {/* ================= SUMMARY CARDS ================= */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        {/* TOTAL PAID */}
-        <div
-          className="
-            group relative overflow-hidden
-            rounded-2xl
-            border border-emerald-100
-            bg-gradient-to-br from-emerald-50 via-white to-white
-            p-5
-            shadow-sm
-            transition-all duration-300
-            hover:-translate-y-1
-            hover:shadow-md
-          "
-        >
-          <div className="flex items-start justify-between">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wider text-emerald-600">
+                    Total Paid
+                  </p>
 
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-wider text-emerald-600">
-                Total Paid
-              </p>
+                  <p className="mt-2 text-2xl font-bold tracking-tight text-gray-900">
+                    {formatAmount(paymentSummary.paid)}
+                  </p>
 
-              <p className="mt-2 text-2xl font-bold tracking-tight text-gray-900">
-                {formatAmount(paymentSummary.paid)}
-              </p>
+                  <p className="mt-1 text-xs text-gray-500">
+                    {paymentSummary.paidCount} successful transactions
+                  </p>
+                </div>
 
-              <p className="mt-1 text-xs text-gray-500">
-                {paymentSummary.paidCount} successful transactions
-              </p>
+                <div
+                  className="
+                    flex h-11 w-11 items-center justify-center
+                    rounded-xl
+                    bg-emerald-100
+                    text-emerald-600
+                    transition-transform
+                    group-hover:scale-110
+                  "
+                >
+                  <CheckCircle2 className="h-5 w-5" />
+                </div>
+              </div>
+              <div className="mt-4 h-1 overflow-hidden rounded-full bg-emerald-100">
+                <div className="h-full w-full rounded-full bg-emerald-500" />
+              </div>
             </div>
-
+            {/* PENDING */}
             <div
               className="
-                flex h-11 w-11 items-center justify-center
-                rounded-xl
-                bg-emerald-100
-                text-emerald-600
-                transition-transform
-                group-hover:scale-110
+                group relative overflow-hidden
+                rounded-2xl
+                border border-amber-100
+                bg-gradient-to-br from-amber-50 via-white to-white
+                p-5
+                shadow-sm
+                transition-all duration-300
+                hover:-translate-y-1
+                hover:shadow-md
               "
             >
-              <CheckCircle2 className="h-5 w-5" />
+              <div className="flex items-start justify-between">
+
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wider text-amber-600">
+                    Pending
+                  </p>
+
+                  <p className="mt-2 text-2xl font-bold tracking-tight text-gray-900">
+                    {formatAmount(paymentSummary.pending)}
+                  </p>
+
+                  <p className="mt-1 text-xs text-gray-500">
+                    {paymentSummary.pendingCount} transactions awaiting payment
+                  </p>
+                </div>
+
+                <div
+                  className="
+                    flex h-11 w-11 items-center justify-center
+                    rounded-xl
+                    bg-amber-100
+                    text-amber-600
+                    transition-transform
+                    group-hover:scale-110
+                  "
+                >
+                  <Clock3 className="h-5 w-5" />
+                </div>
+              </div>
+
+              <div className="mt-4 h-1 overflow-hidden rounded-full bg-amber-100">
+                <div className="h-full w-full rounded-full bg-amber-500" />
+              </div>
             </div>
-          </div>
-          <div className="mt-4 h-1 overflow-hidden rounded-full bg-emerald-100">
-            <div className="h-full w-full rounded-full bg-emerald-500" />
-          </div>
-        </div>
-        {/* PENDING */}
-        <div
-          className="
-            group relative overflow-hidden
-            rounded-2xl
-            border border-amber-100
-            bg-gradient-to-br from-amber-50 via-white to-white
-            p-5
-            shadow-sm
-            transition-all duration-300
-            hover:-translate-y-1
-            hover:shadow-md
-          "
-        >
-          <div className="flex items-start justify-between">
-
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-wider text-amber-600">
-                Pending
-              </p>
-
-              <p className="mt-2 text-2xl font-bold tracking-tight text-gray-900">
-                {formatAmount(paymentSummary.pending)}
-              </p>
-
-              <p className="mt-1 text-xs text-gray-500">
-                {paymentSummary.pendingCount} transactions awaiting payment
-              </p>
-            </div>
-
+            {/* FAILED */}
             <div
               className="
-                flex h-11 w-11 items-center justify-center
-                rounded-xl
-                bg-amber-100
-                text-amber-600
-                transition-transform
-                group-hover:scale-110
+                group relative overflow-hidden
+                rounded-2xl
+                border border-red-100
+                bg-gradient-to-br from-red-50 via-white to-white
+                p-5
+                shadow-sm
+                transition-all duration-300
+                hover:-translate-y-1
+                hover:shadow-md
               "
             >
-              <Clock3 className="h-5 w-5" />
+              <div className="flex items-start justify-between">
+
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wider text-red-600">
+                    Failed
+                  </p>
+
+                  <p className="mt-2 text-2xl font-bold tracking-tight text-gray-900">
+                    {formatAmount(paymentSummary.failed)}
+                  </p>
+
+                  <p className="mt-1 text-xs text-gray-500">
+                    {paymentSummary.failedCount} failed transactions
+                  </p>
+                </div>
+
+                <div
+                  className="
+                    flex h-11 w-11 items-center justify-center
+                    rounded-xl
+                    bg-red-100
+                    text-red-600
+                    transition-transform
+                    group-hover:scale-110
+                  "
+                >
+                  <CircleX className="h-5 w-5" />
+                </div>
+              </div>
+
+              <div className="mt-4 h-1 overflow-hidden rounded-full bg-red-100">
+                <div className="h-full w-full rounded-full bg-red-500" />
+              </div>
             </div>
-          </div>
-
-          <div className="mt-4 h-1 overflow-hidden rounded-full bg-amber-100">
-            <div className="h-full w-full rounded-full bg-amber-500" />
-          </div>
-        </div>
-        {/* FAILED */}
-        <div
-          className="
-            group relative overflow-hidden
-            rounded-2xl
-            border border-red-100
-            bg-gradient-to-br from-red-50 via-white to-white
-            p-5
-            shadow-sm
-            transition-all duration-300
-            hover:-translate-y-1
-            hover:shadow-md
-          "
-        >
-          <div className="flex items-start justify-between">
-
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-wider text-red-600">
-                Failed
-              </p>
-
-              <p className="mt-2 text-2xl font-bold tracking-tight text-gray-900">
-                {formatAmount(paymentSummary.failed)}
-              </p>
-
-              <p className="mt-1 text-xs text-gray-500">
-                {paymentSummary.failedCount} failed transactions
-              </p>
-            </div>
-
+            {/* TOTAL TRANSACTIONS */}
             <div
               className="
-                flex h-11 w-11 items-center justify-center
-                rounded-xl
-                bg-red-100
-                text-red-600
-                transition-transform
-                group-hover:scale-110
+                group relative overflow-hidden
+                rounded-2xl
+                border border-blue-100
+                bg-gradient-to-br from-blue-50 via-white to-white
+                p-5
+                shadow-sm
+                transition-all duration-300
+                hover:-translate-y-1
+                hover:shadow-md
               "
             >
-              <CircleX className="h-5 w-5" />
-            </div>
-          </div>
+              <div className="flex items-start justify-between">
 
-          <div className="mt-4 h-1 overflow-hidden rounded-full bg-red-100">
-            <div className="h-full w-full rounded-full bg-red-500" />
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wider text-blue-600">
+                    Transactions
+                  </p>
+
+                  <p className="mt-2 text-2xl font-bold tracking-tight text-gray-900">
+                    {paymentSummary.totalCount.toLocaleString("en-IN")}
+                  </p>
+
+                  <p className="mt-1 text-xs text-gray-500">
+                    Total transactions in current view
+                  </p>
+                </div>
+
+                <div
+                  className="
+                    flex h-11 w-11 items-center justify-center
+                    rounded-xl
+                    bg-blue-100
+                    text-blue-600
+                    transition-transform
+                    group-hover:scale-110
+                  "
+                >
+                  <ReceiptText className="h-5 w-5" />
+                </div>
+              </div>
+
+              <div className="mt-4 flex items-center gap-1.5 text-xs font-medium text-blue-600">
+                <TrendingUp className="h-3.5 w-3.5" />
+                <span>
+                  Collection {formatAmount(paymentSummary.total)}
+                </span>
+              </div>
+            </div>
           </div>
         </div>
-        {/* TOTAL TRANSACTIONS */}
-        <div
-          className="
-            group relative overflow-hidden
-            rounded-2xl
-            border border-blue-100
-            bg-gradient-to-br from-blue-50 via-white to-white
-            p-5
-            shadow-sm
-            transition-all duration-300
-            hover:-translate-y-1
-            hover:shadow-md
-          "
-        >
-          <div className="flex items-start justify-between">
-
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-wider text-blue-600">
-                Transactions
-              </p>
-
-              <p className="mt-2 text-2xl font-bold tracking-tight text-gray-900">
-                {paymentSummary.totalCount.toLocaleString("en-IN")}
-              </p>
-
-              <p className="mt-1 text-xs text-gray-500">
-                Total transactions in current view
-              </p>
-            </div>
-
-            <div
-              className="
-                flex h-11 w-11 items-center justify-center
-                rounded-xl
-                bg-blue-100
-                text-blue-600
-                transition-transform
-                group-hover:scale-110
-              "
-            >
-              <ReceiptText className="h-5 w-5" />
-            </div>
-          </div>
-
-          <div className="mt-4 flex items-center gap-1.5 text-xs font-medium text-blue-600">
-            <TrendingUp className="h-3.5 w-3.5" />
-            <span>
-              Collection {formatAmount(paymentSummary.total)}
-            </span>
-          </div>
-        </div>
-      </div>
-    </div>
       {/* Table */}
       <div className="hz-card overflow-hidden mt-3">
         <div className="
@@ -732,59 +636,22 @@ console.log("Payment Data:", paymentData);
                 paymentData.transactions.map((item, index) => {
                   const customerName = item.customerName || "--";
                   const travellerName = item.travellerName || "--";
-                  const customerInitial =
-                    customerName !== "--"
-                      ? customerName.charAt(0).toUpperCase()
-                      : "?";
-
-                  const travellerInitial =
-                    travellerName !== "--"
-                      ? travellerName.charAt(0).toUpperCase()
-                      : "?";
-
-                  const transactionId =
-                    item.gatewayTransactionId || item.transactionId || "--";
-
+                  const customerInitial = customerName !== "--" ? customerName.charAt(0).toUpperCase() : "?";
+                  const travellerInitial = travellerName !== "--" ? travellerName.charAt(0).toUpperCase() : "?";
+                  const transactionId = item.gatewayTransactionId || item.transactionId || "--";
                   const paymentId = item.orderId || "--";
-
-                  const paymentStatus =
-                    item.paymentStatus?.toUpperCase() || "UNKNOWN";
-                  console.log("Payment Status:", paymentStatus);
-                  const paymentMethod =
-                    item.paymentMethod?.toUpperCase() || "--";
-
-                  const isSuccess =
-                    paymentStatus === "CHARGED" ||
-                    paymentStatus === "SUCCESS";
-
-                  const isPending =
-                    paymentStatus === "NEW" ||
-                    paymentStatus === "PENDING";
-
-                  const isFailed =
-                    !isSuccess && !isPending;
-
+                  const paymentStatus = item.paymentStatus?.toUpperCase() || "UNKNOWN";
+                  const paymentMethod = item.paymentMethod?.toUpperCase() || "--";
+                  const isSuccess = paymentStatus === "CHARGED" || paymentStatus === "SUCCESS";
+                  const isPending = paymentStatus === "NEW" || paymentStatus === "PENDING";
+                  const isFailed = !isSuccess && !isPending;
                   return (
-                    <tr
-                      key={item.id || `${transactionId}-${index}`}
-                      className="
-                        group
-                        border-b
-                        border-[var(--hz-border)]
-                        bg-white
-                        transition-all
-                        duration-200
-                        hover:bg-[var(--hz-hover)]
-                      "
-                    >
+                    <tr key={item.id || `${transactionId}-${index}`} className="group border-b border-[var(--hz-border)] bg-white transition-all duration-200 hover:bg-[var(--hz-hover)]">
                       {/* # */}
                       <td className="px-5 py-4 whitespace-nowrap">
                         <span
-                          className="
-                            flex
-                            h-8
-                            w-8
-                            items-center
+                          className="                            flex
+                            h-8 w-8 items-center
                             justify-center
                             rounded-lg
                             bg-[var(--hz-hover)]
@@ -796,8 +663,6 @@ console.log("Payment Data:", paymentData);
                           {String(index + 1).padStart(2, "0")}
                         </span>
                       </td>
-
-                      {/* CUSTOMER */}
                       <td className="px-5 py-4">
                         <div className="flex items-center gap-3 min-w-[170px]">
                           <div
@@ -851,8 +716,6 @@ console.log("Payment Data:", paymentData);
                           </div>
                         </div>
                       </td>
-
-                      {/* TRAVELLER */}
                       <td className="px-5 py-4">
                         <div className="flex items-center gap-3 min-w-[170px]">
                           <div
@@ -896,8 +759,6 @@ console.log("Payment Data:", paymentData);
                           </div>
                         </div>
                       </td>
-
-                      {/* TRANSACTION ID */}
                       <td className="px-5 py-4">
                         <div className="min-w-[190px]">
                           <p
@@ -921,8 +782,6 @@ console.log("Payment Data:", paymentData);
                           </p>
                         </div>
                       </td>
-
-                      {/* PAYMENT ID */}
                       <td className="px-5 py-4 whitespace-nowrap">
                         <span
                           className="
@@ -944,8 +803,6 @@ console.log("Payment Data:", paymentData);
                           {paymentId}
                         </span>
                       </td>
-
-                      {/* METHOD */}
                       <td className="px-5 py-4 whitespace-nowrap">
                         {paymentMethod === "--" ? (
                           <span className="text-sm text-gray-400">--</span>
@@ -969,8 +826,6 @@ console.log("Payment Data:", paymentData);
                           </span>
                         )}
                       </td>
-
-                      {/* STATUS */}
                       <td className="px-5 py-4 whitespace-nowrap">
                         <span
                           className={`
@@ -1017,8 +872,6 @@ console.log("Payment Data:", paymentData);
                           {paymentStatus === "NEW" ? "Pending" : paymentStatus}
                         </span>
                       </td>
-
-                      {/* AMOUNT */}
                       <td className="px-5 py-4 whitespace-nowrap">
                         <div className="text-right sm:text-left">
                           <p className="text-sm font-bold text-[var(--hz-text)]">
@@ -1031,8 +884,6 @@ console.log("Payment Data:", paymentData);
                           </p>
                         </div>
                       </td>
-
-                      {/* DATE */}
                       <td className="px-5 py-4 whitespace-nowrap">
                         <div className="flex items-center gap-2">
                           <div
@@ -1065,8 +916,6 @@ console.log("Payment Data:", paymentData);
                           </div>
                         </div>
                       </td>
-
-                      {/* ACTIONS */}
                       <td className="px-5 py-4 whitespace-nowrap">
                         <div className="flex items-center gap-2">
 
@@ -1165,7 +1014,6 @@ console.log("Payment Data:", paymentData);
           </table>
         </div>
       </div>
-
       {/* <PaymentDetailsModal /> */}
       <Loader
         isLoading={isLoading}
@@ -1174,25 +1022,10 @@ console.log("Payment Data:", paymentData);
       />
       {/* ============================================================    TRANSACTION DETAIL DRAWER============================================================ */}
 
-      {showTransactionDrawer && selectedTransaction && (
-        <div className="fixed inset-0 z-[100]">
-
-          {/* BACKDROP */}
-          <div
-            className="
-              absolute inset-0
-              bg-slate-950/40
-              backdrop-blur-[2px]
-              transition-opacity
-            "
-            onClick={closeTransactionDrawer}
-          />
-
-          {/* RIGHT DRAWER */}
-          <aside className="absolute right-0 top-0 flex h-full w-full max-w-[560px] flex-col bg-white shadow-[-20px_0_60px_rgba(15,23,42,0.18)] animate-in slide-in-from-right duration-300">
-
-            {/* ======================================================          HEADER      ====================================================== */}
-
+      {/* {showTransactionDrawer && selectedTransaction && (
+        <div className="fixed inset-0 z-[9999]">
+          <div className="fixed  inset-0 bg-slate-950/40 backdrop-blur-[2px] transition-opacity" onClick={closeTransactionDrawer} />
+          <aside className="fixed right-0 top-0  bottom-0 z-[10000] flex h-screen w-full max-w-[560px] flex-col bg-white shadow-[-20px_0_60px_rgba(15,23,42,0.18)] animate-in slide-in-from-right duration-300">
             <div
               className="
                 relative
@@ -1252,9 +1085,6 @@ console.log("Payment Data:", paymentData);
                 </button>
 
               </div>
-
-
-              {/* PAYMENT HERO */}
 
               <div
                 className="
@@ -1373,90 +1203,19 @@ console.log("Payment Data:", paymentData);
               </div>
 
             </div>
-
-
-            {/* ====================================================== SCROLLABLE CONTENT      ====================================================== */}
-
             <div className="flex-1 overflow-y-auto px-5 py-5">
-
-              {/* ==================================================== PAYMENT TIMELINE==================================================== */}
-
-              <TransactionSection
-                title="Payment Timeline"
-                icon={<Clock3 className="h-4 w-4" />}
-              >
-
+              <TransactionSection title="Payment Timeline" icon={<Clock3 className="h-4 w-4" />} >
                 <div className="relative ml-2">
-
-                  {/* vertical line */}
-                  <div
-                    className="
-                      absolute left-[9px]
-                      top-3 bottom-3
-                      w-px
-                      bg-slate-200
-                    "
-                  />
-
-
-                  {/* INITIATED */}
-
-                  <TimelineItem
-                    title="Payment Initiated"
-                    date={
-                      selectedTransaction.paymentInitiatedOn ||
-                      "--"
-                    }
-                    description="Payment request was created."
-                    status="completed"
-                    icon={<CreditCard className="h-3.5 w-3.5" />}
-                  />
-
-
-                  {/* PROCESSING */}
-
-                  <TimelineItem
-                    title="Payment Processing"
-                    date={
-                      selectedTransaction.paymentInitiatedOn ||
-                      "--"
-                    }
-                    description="Payment request was sent to the payment gateway."
-                    status="completed"
-                    icon={<RefreshCw className="h-3.5 w-3.5" />}
-                  />
-
-
-                  {/* CURRENT STATUS */}
-
+                  <div className="absolute left-[9px] top-3 bottom-3 w-px bg-slate-200"/>
+                  <TimelineItem title="Payment Initiated" date={selectedTransaction.paymentInitiatedOn || "--"} description="Payment request was created." status="completed" icon={<CreditCard className="h-3.5 w-3.5" />} />
+                  <TimelineItem title="Payment Processing" date={selectedTransaction.paymentInitiatedOn || "--"} description="Payment request was sent to the payment gateway." status="completed" icon={<RefreshCw className="h-3.5 w-3.5" />} />
                   {(() => {
-
-                    const status =
-                      selectedTransaction.paymentStatus?.toUpperCase() ||
-                      "UNKNOWN";
-
-                    const success =
-                      status === "CHARGED" ||
-                      status === "SUCCESS";
-
-                    const pending =
-                      status === "NEW" ||
-                      status === "PENDING";
-
+                    const status = selectedTransaction.paymentStatus?.toUpperCase() || "UNKNOWN";
+                    const success = status === "CHARGED" || status === "SUCCESS";
+                    const pending = status === "NEW" || status === "PENDING";
                     return (
-                      <TimelineItem
-                        title={
-                          success
-                            ? "Payment Successful"
-                            : pending
-                            ? "Payment Pending"
-                            : "Payment Failed"
-                        }
-                        date={
-                          selectedTransaction.paymentCompletedOn ||
-                          selectedTransaction.paymentInitiatedOn ||
-                          "--"
-                        }
+                      <TimelineItem title={success ? "Payment Successful" : pending ? "Payment Pending" : "Payment Failed" }
+                        date={selectedTransaction.paymentCompletedOn || selectedTransaction.paymentInitiatedOn || "--"}
                         description={
                           success
                             ? "Payment has been successfully completed."
@@ -1464,13 +1223,7 @@ console.log("Payment Data:", paymentData);
                             ? "Payment is currently awaiting confirmation."
                             : "Payment was not successfully completed."
                         }
-                        status={
-                          success
-                            ? "success"
-                            : pending
-                            ? "pending"
-                            : "failed"
-                        }
+                        status={success ? "success" : pending ? "pending" : "failed"}
                         icon={
                           success ? (
                             <CheckCircle2 className="h-3.5 w-3.5" />
@@ -1489,56 +1242,16 @@ console.log("Payment Data:", paymentData);
                 </div>
 
               </TransactionSection>
-
-
-              {/* ====================================================
-                  PAYMENT DETAILS
-              ==================================================== */}
-
-              <TransactionSection
-                title="Payment Details"
-                icon={<CreditCard className="h-4 w-4" />}
-              >
-
+              <TransactionSection title="Payment Details" icon={<CreditCard className="h-4 w-4" />}>
                 <DetailGrid>
-
-                  <DetailItem
-                    label="Transaction ID"
-                    value={
-                      selectedTransaction.gatewayTransactionId ||
-                      selectedTransaction.transactionId ||
-                      "--"
-                    }
-                    mono
-                  />
-
-                  <DetailItem
-                    label="Payment ID"
-                    value={selectedTransaction.orderId || "--"}
-                    mono
-                  />
-
-                  <DetailItem
-                    label="Payment Method"
-                    value={
-                      selectedTransaction.paymentMethod?.toUpperCase() ||
-                      "--"
-                    }
-                  />
-
-                  <DetailItem
-                    label="Amount"
-                    value={`₹${Number(
-                      selectedTransaction.amount || 0
-                    ).toLocaleString("en-IN")}`}
-                    highlight
-                  />
-
+                  <DetailItem label="Transaction ID" value={selectedTransaction.gatewayTransactionId || selectedTransaction.transactionId || "--"} mono/>
+                  <DetailItem label="Payment ID" value={selectedTransaction.orderId || "--"} mono />
+                  <DetailItem label="Payment Method" value={selectedTransaction.paymentMethod?.toUpperCase() || "--"} />
+                  <DetailItem label="Amount" value={`₹${Number(selectedTransaction.amount || 0).toLocaleString("en-IN")}`} highlight />
                   <DetailItem
                     label="Currency"
                     value={selectedTransaction.currency || "INR"}
                   />
-
                   <DetailItem
                     label="Gateway Payment ID"
                     value={
@@ -1569,19 +1282,11 @@ console.log("Payment Data:", paymentData);
                 </DetailGrid>
 
               </TransactionSection>
-
-
-              {/* ====================================================
-                  PRODUCT DETAILS
-              ==================================================== */}
-
               <TransactionSection
                 title="Product Details"
                 icon={<Package className="h-4 w-4" />}
               >
-
                 <DetailGrid>
-
                   <DetailItem
                     label="Package"
                     value={
@@ -1610,19 +1315,11 @@ console.log("Payment Data:", paymentData);
                 </DetailGrid>
 
               </TransactionSection>
-
-
-              {/* ====================================================
-                  CUSTOMER DETAILS
-              ==================================================== */}
-
               <TransactionSection
                 title="Customer Details"
                 icon={<UserRound className="h-4 w-4" />}
               >
-
                 <DetailGrid>
-
                   <DetailItem
                     label="Customer Name"
                     value={
@@ -1630,7 +1327,6 @@ console.log("Payment Data:", paymentData);
                     }
                     full
                   />
-
                   <DetailItem
                     label="Email"
                     value={
@@ -1657,19 +1353,12 @@ console.log("Payment Data:", paymentData);
                 </DetailGrid>
 
               </TransactionSection>
-
-
-              {/* ====================================================
-                  TRAVELLER DETAILS
-              ==================================================== */}
-
               <TransactionSection
                 title="Traveller Details"
                 icon={<UsersRound className="h-4 w-4" />}
               >
 
                 <DetailGrid>
-
                   <DetailItem
                     label="Traveller Name"
                     value={
@@ -1704,12 +1393,6 @@ console.log("Payment Data:", paymentData);
                 </DetailGrid>
 
               </TransactionSection>
-
-
-              {/* ====================================================
-                  PAYMENT HISTORY
-              ==================================================== */}
-
               <TransactionSection
                 title="Payment History"
                 icon={<History className="h-4 w-4" />}
@@ -1811,12 +1494,6 @@ console.log("Payment Data:", paymentData);
               </TransactionSection>
 
             </div>
-
-
-            {/* ======================================================
-                FOOTER
-            ====================================================== */}
-
             <div
               className="
                 border-t border-slate-200
@@ -1858,10 +1535,15 @@ console.log("Payment Data:", paymentData);
               </div>
 
             </div>
-
           </aside>
         </div>
-      )}
+      )} */}
+      <PaymentTransactionDrawer open={showTransactionDrawer} selectedTransaction={selectedTransaction} 
+        onClose={() => {
+          setShowTransactionDrawer(false);
+          setSelectedTransaction(null);
+        }}
+      />
       {/* =========================================================  ENTERPRISE PRINT REPORT    ========================================================= */}
       <div id="payment-print-report" className="hidden print:block">
 
@@ -2253,5 +1935,723 @@ const TimelineItem = ({
     </div>
   );
 };
+import { createPortal } from "react-dom";
+
+function PaymentTransactionDrawer({open,selectedTransaction,onClose,}) {
+  if (!open || !selectedTransaction) {
+    return null;
+  }
+
+  const status =
+    selectedTransaction.paymentStatus?.toUpperCase() || "UNKNOWN";
+
+  const isSuccess =
+    status === "SUCCESS" ||
+    status === "CHARGED" ||
+    status === "PAID";
+
+  const isPending =
+    status === "PENDING" ||
+    status === "NEW";
+
+  const displayStatus = isSuccess
+    ? "PAID"
+    : isPending
+    ? "PENDING"
+    : "FAILED";
+
+  return createPortal(
+    <div
+      style={{
+        position: "fixed",
+        inset: 0,
+        zIndex: 2147483647,
+      }}
+    >
+      {/* =====================================================
+          BACKDROP
+      ====================================================== */}
+
+      <div
+        onClick={onClose}
+        style={{
+          position: "fixed",
+          inset: 0,
+          background: "rgba(15, 23, 42, 0.45)",
+          backdropFilter: "blur(2px)",
+        }}
+      />
+
+
+      {/* =====================================================
+          SINGLE RIGHT DRAWER
+      ====================================================== */}
+
+      <aside
+        style={{
+          position: "fixed",
+          top: 0,
+          right: 0,
+          bottom: 0,
+          width: "min(560px, 100vw)",
+          height: "100vh",
+          background: "#ffffff",
+          zIndex: 2147483647,
+          display: "flex",
+          flexDirection: "column",
+          boxShadow:
+            "-20px 0 60px rgba(15, 23, 42, 0.20)",
+        }}
+      >
+
+        {/* ===================================================
+            HEADER
+        ==================================================== */}
+
+        <div className="border-b border-slate-200 bg-white px-5 py-4">
+
+          <div className="flex items-start justify-between gap-4">
+
+            <div className="flex items-center gap-3">
+
+              <div
+                className="
+                  flex h-11 w-11
+                  items-center justify-center
+                  rounded-xl
+                  bg-emerald-50
+                  text-emerald-600
+                  ring-1 ring-emerald-100
+                "
+              >
+                <ReceiptText className="h-5 w-5" />
+              </div>
+
+              <div>
+
+                <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+                  Transaction Details
+                </p>
+
+                <h2 className="mt-0.5 text-base font-bold text-slate-900">
+                  {selectedTransaction.orderId || "Payment"}
+                </h2>
+
+              </div>
+
+            </div>
+
+
+            <button
+              type="button"
+              onClick={onClose}
+              className="
+                flex h-9 w-9
+                items-center justify-center
+                rounded-lg
+                border border-slate-200
+                bg-white
+                text-slate-500
+                transition
+                hover:border-red-200
+                hover:bg-red-50
+                hover:text-red-600
+              "
+            >
+              <X className="h-4 w-4" />
+            </button>
+
+          </div>
+
+
+          {/* =================================================
+              PAYMENT HERO
+          ================================================== */}
+
+          <div
+            className="
+              mt-4
+              rounded-2xl
+              border border-slate-200
+              bg-gradient-to-br
+              from-slate-50
+              via-white
+              to-emerald-50/40
+              p-4
+            "
+          >
+
+            <div className="flex items-center justify-between">
+
+              <div>
+
+                <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+                  Payment Amount
+                </p>
+
+                <p className="mt-1 text-2xl font-extrabold tracking-tight text-slate-900">
+                  ₹
+                  {Number(
+                    selectedTransaction.amount || 0
+                  ).toLocaleString("en-IN")}
+                </p>
+
+              </div>
+
+
+              <span
+                className={`
+                  inline-flex items-center gap-2
+                  rounded-full
+                  px-3 py-1.5
+                  text-xs font-bold
+                  uppercase tracking-wide
+                  ${
+                    isSuccess
+                      ? "bg-emerald-100 text-emerald-700"
+                      : isPending
+                      ? "bg-amber-100 text-amber-700"
+                      : "bg-red-100 text-red-700"
+                  }
+                `}
+              >
+
+                <span
+                  className={`
+                    h-2 w-2 rounded-full
+                    ${
+                      isSuccess
+                        ? "bg-emerald-500"
+                        : isPending
+                        ? "bg-amber-500"
+                        : "bg-red-500"
+                    }
+                  `}
+                />
+
+                {displayStatus}
+
+              </span>
+
+            </div>
+
+
+            <div className="mt-3 grid grid-cols-2 gap-4 border-t border-slate-200 pt-3">
+
+              <div>
+
+                <p className="text-[10px] uppercase tracking-wider text-slate-400">
+                  Payment ID
+                </p>
+
+                <p className="mt-1 truncate font-mono text-xs font-semibold text-slate-700">
+                  {selectedTransaction.orderId || "--"}
+                </p>
+
+              </div>
+
+
+              <div className="text-right">
+
+                <p className="text-[10px] uppercase tracking-wider text-slate-400">
+                  Method
+                </p>
+
+                <p className="mt-1 text-xs font-bold text-slate-700">
+                  {selectedTransaction.paymentMethod?.toUpperCase() ||
+                    "--"}
+                </p>
+
+              </div>
+
+            </div>
+
+          </div>
+
+        </div>
+
+
+        {/* ===================================================
+            SCROLLABLE CONTENT
+        ==================================================== */}
+
+        <div className="flex-1 overflow-y-auto px-5 py-5">
+
+
+          {/* =================================================
+              PAYMENT TIMELINE
+          ================================================== */}
+
+          <TransactionSection
+            title="Payment Timeline"
+            icon={<Clock3 className="h-4 w-4" />}
+          >
+
+            <div className="relative ml-2">
+
+              <div
+                className="
+                  absolute
+                  left-[9px]
+                  top-3
+                  bottom-3
+                  w-px
+                  bg-slate-200
+                "
+              />
+
+
+              <TimelineItem
+                title="Payment Initiated"
+                date={
+                  selectedTransaction.paymentInitiatedOn ||
+                  "--"
+                }
+                description="Payment request was created."
+                status="completed"
+                icon={
+                  <CreditCard className="h-3.5 w-3.5" />
+                }
+              />
+
+
+              <TimelineItem
+                title="Payment Processing"
+                date={
+                  selectedTransaction.paymentInitiatedOn ||
+                  "--"
+                }
+                description="Payment request was sent to the payment gateway."
+                status="completed"
+                icon={
+                  <RefreshCw className="h-3.5 w-3.5" />
+                }
+              />
+
+
+              <TimelineItem
+                title={
+                  isSuccess
+                    ? "Payment Successful"
+                    : isPending
+                    ? "Payment Pending"
+                    : "Payment Failed"
+                }
+                date={
+                  selectedTransaction.paymentCompletedOn ||
+                  selectedTransaction.paymentInitiatedOn ||
+                  "--"
+                }
+                description={
+                  isSuccess
+                    ? "Payment has been successfully completed."
+                    : isPending
+                    ? "Payment is currently awaiting confirmation."
+                    : "Payment was not successfully completed."
+                }
+                status={
+                  isSuccess
+                    ? "success"
+                    : isPending
+                    ? "pending"
+                    : "failed"
+                }
+                icon={
+                  isSuccess ? (
+                    <CheckCircle2 className="h-3.5 w-3.5" />
+                  ) : isPending ? (
+                    <Clock3 className="h-3.5 w-3.5" />
+                  ) : (
+                    <CircleX className="h-3.5 w-3.5" />
+                  )
+                }
+                last
+              />
+
+            </div>
+
+          </TransactionSection>
+
+
+          {/* =================================================
+              PAYMENT DETAILS
+          ================================================== */}
+
+          <TransactionSection
+            title="Payment Details"
+            icon={<CreditCard className="h-4 w-4" />}
+          >
+
+            <DetailGrid>
+
+              <DetailItem
+                label="Transaction ID"
+                value={
+                  selectedTransaction.gatewayTransactionId ||
+                  selectedTransaction.transactionId ||
+                  "--"
+                }
+                mono
+              />
+
+              <DetailItem
+                label="Payment ID"
+                value={
+                  selectedTransaction.orderId || "--"
+                }
+                mono
+              />
+
+              <DetailItem
+                label="Payment Method"
+                value={
+                  selectedTransaction.paymentMethod?.toUpperCase() ||
+                  "--"
+                }
+              />
+
+              <DetailItem
+                label="Amount"
+                value={`₹${Number(
+                  selectedTransaction.amount || 0
+                ).toLocaleString("en-IN")}`}
+                highlight
+              />
+
+              <DetailItem
+                label="Currency"
+                value={
+                  selectedTransaction.currency || "INR"
+                }
+              />
+
+              <DetailItem
+                label="Payment Gateway"
+                value={
+                  selectedTransaction.paymentGateway || "--"
+                }
+              />
+
+              <DetailItem
+                label="Gateway Payment ID"
+                value={
+                  selectedTransaction.gatewayPaymentId ||
+                  "--"
+                }
+                mono
+              />
+
+              <DetailItem
+                label="Gateway Reference"
+                value={
+                  selectedTransaction.gatewayReferenceNo ||
+                  "--"
+                }
+                mono
+              />
+
+              <DetailItem
+                label="Gateway Status"
+                value={
+                  selectedTransaction.gatewayStatus ||
+                  "--"
+                }
+              />
+
+            </DetailGrid>
+
+          </TransactionSection>
+
+
+          {/* =================================================
+              PRODUCT DETAILS
+          ================================================== */}
+
+          <TransactionSection
+            title="Product Details"
+            icon={<Package className="h-4 w-4" />}
+          >
+
+            <DetailGrid>
+
+              <DetailItem
+                label="Package"
+                value={
+                  selectedTransaction.productName ||
+                  "--"
+                }
+                full
+              />
+
+              <DetailItem
+                label="Product ID"
+                value={
+                  selectedTransaction.productId || "--"
+                }
+              />
+
+              <DetailItem
+                label="Description"
+                value={
+                  selectedTransaction.productDescription ||
+                  "--"
+                }
+                full
+              />
+
+            </DetailGrid>
+
+          </TransactionSection>
+
+
+          {/* =================================================
+              CUSTOMER DETAILS
+          ================================================== */}
+
+          <TransactionSection
+            title="Customer Details"
+            icon={<UserRound className="h-4 w-4" />}
+          >
+
+            <DetailGrid>
+
+              <DetailItem
+                label="Customer Name"
+                value={
+                  selectedTransaction.customerName ||
+                  "--"
+                }
+                full
+              />
+
+              <DetailItem
+                label="Email"
+                value={
+                  selectedTransaction.customerEmail ||
+                  "--"
+                }
+              />
+
+              <DetailItem
+                label="Phone"
+                value={
+                  selectedTransaction.customerPhone ||
+                  "--"
+                }
+              />
+
+              <DetailItem
+                label="Customer ID"
+                value={
+                  selectedTransaction.customerId || "--"
+                }
+              />
+
+            </DetailGrid>
+
+          </TransactionSection>
+
+
+          {/* =================================================
+              TRAVELLER DETAILS
+          ================================================== */}
+
+          <TransactionSection
+            title="Traveller Details"
+            icon={<UsersRound className="h-4 w-4" />}
+          >
+
+            <DetailGrid>
+
+              <DetailItem
+                label="Traveller Name"
+                value={
+                  selectedTransaction.travellerName ||
+                  "--"
+                }
+                full
+              />
+
+              <DetailItem
+                label="Traveller ID"
+                value={
+                  selectedTransaction.travellerId || "--"
+                }
+              />
+
+            </DetailGrid>
+
+          </TransactionSection>
+
+
+          {/* =================================================
+              PAYMENT HISTORY
+          ================================================== */}
+
+          <TransactionSection
+            title="Payment History"
+            icon={<History className="h-4 w-4" />}
+          >
+
+            {selectedTransaction.paymentHistory?.length > 0 ? (
+
+              <div className="space-y-3">
+
+                {selectedTransaction.paymentHistory.map(
+                  (history, index) => (
+
+                    <div
+                      key={history.id || index}
+                      className="
+                        rounded-xl
+                        border border-slate-200
+                        bg-slate-50/70
+                        p-3
+                      "
+                    >
+
+                      <div className="flex items-center justify-between">
+
+                        <div>
+
+                          <p className="text-xs font-bold text-slate-800">
+                            Attempt #{index + 1}
+                          </p>
+
+                          <p className="mt-1 text-[11px] text-slate-500">
+                            {history.date ||
+                              history.createdOn ||
+                              "--"}
+                          </p>
+
+                        </div>
+
+                        <span
+                          className="
+                            rounded-full
+                            bg-slate-100
+                            px-2.5 py-1
+                            text-[10px]
+                            font-bold
+                            uppercase
+                            text-slate-600
+                          "
+                        >
+                          {history.status || "--"}
+                        </span>
+
+                      </div>
+
+
+                      <div className="mt-3 flex justify-between border-t border-slate-200 pt-2">
+
+                        <span className="text-[11px] text-slate-500">
+                          Amount
+                        </span>
+
+                        <span className="text-xs font-bold text-slate-800">
+                          ₹
+                          {Number(
+                            history.amount || 0
+                          ).toLocaleString("en-IN")}
+                        </span>
+
+                      </div>
+
+                    </div>
+
+                  )
+                )}
+
+              </div>
+
+            ) : (
+
+              <div
+                className="
+                  rounded-xl
+                  border border-dashed
+                  border-slate-200
+                  bg-slate-50/60
+                  px-4 py-6
+                  text-center
+                "
+              >
+
+                <History className="mx-auto h-6 w-6 text-slate-300" />
+
+                <p className="mt-2 text-xs font-semibold text-slate-600">
+                  No payment history available
+                </p>
+
+                <p className="mt-1 text-[11px] text-slate-400">
+                  Historical payment attempts were not returned by the API.
+                </p>
+
+              </div>
+
+            )}
+
+          </TransactionSection>
+
+        </div>
+
+
+        {/* ===================================================
+            FOOTER
+        ==================================================== */}
+
+        <div
+          className="
+            border-t
+            border-slate-200
+            bg-white
+            px-5 py-3
+          "
+        >
+
+          <div className="flex items-center justify-between">
+
+            <div>
+
+              <p className="text-[10px] uppercase tracking-wider text-slate-400">
+                Transaction
+              </p>
+
+              <p className="font-mono text-[11px] font-semibold text-slate-600">
+                {selectedTransaction.gatewayTransactionId ||
+                  selectedTransaction.transactionId ||
+                  "--"}
+              </p>
+
+            </div>
+
+
+            <button
+              type="button"
+              onClick={onClose}
+              className="
+                rounded-lg
+                bg-slate-900
+                px-4 py-2
+                text-xs font-semibold
+                text-white
+                transition
+                hover:bg-slate-800
+              "
+            >
+              Close
+            </button>
+
+          </div>
+
+        </div>
+
+      </aside>
+
+    </div>,
+    document.body
+  );
+}
 
 

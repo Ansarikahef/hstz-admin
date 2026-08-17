@@ -86,7 +86,7 @@ export default function Login() {
             <p className="mt-5 text-white/75 leading-relaxed text-[15px] max-w-md">
               Manage packages, ledger every transaction, and care for your travellers with the calm confidence of a trusted concierge.
             </p>
-            <div className="mt-10 grid grid-cols-3 gap-6 max-w-sm">
+            {/* <div className="mt-10 grid grid-cols-3 gap-6 max-w-sm">
               {[
                 { v: "1.2K+", l: "Bookings" },
                 { v: "₹4.6Cr", l: "Tracked" },
@@ -97,7 +97,7 @@ export default function Login() {
                   <div className="text-[11px] tracking-[0.18em] uppercase text-white/60 mt-1">{s.l}</div>
                 </div>
               ))}
-            </div>
+            </div> */}
           </div>
         </div>
       </div>
